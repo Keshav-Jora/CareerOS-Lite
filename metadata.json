@@ -1,0 +1,6 @@
+{
+  "name": "CareerOS Lite",
+  "description": "A modern personal productivity and career management platform for students to track opportunities, milestones, and daily progress.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
