@@ -91,7 +91,7 @@ CareerOS Lite uses a modular, decoupled frontend architecture designed for clean
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/your-username/careeros-lite.git
+  git clone https://github.com/Keshav-Jora/CareerOS-Lite.git
    cd careeros-lite
    ```
 
@@ -104,7 +104,7 @@ CareerOS Lite uses a modular, decoupled frontend architecture designed for clean
    ```bash
    npm run dev
    ```
-   Open [http://localhost:3000](http://localhost:3000) in your browser.
+   Open [http://localhost:5173](http://localhost:5173) in your browser.
 
 4. **Build for production**:
    ```bash
@@ -115,7 +115,7 @@ CareerOS Lite uses a modular, decoupled frontend architecture designed for clean
 
 ## Current Status
 
-CareerOS Lite is the current frontend-first version of CareerOS. The application focuses on privacy-first local productivity with browser-based storage while future enhancements will continue to improve the experience.
+CareerOS Lite is a frontend-first career productivity application that stores all user data locally using browser localStorage. It is designed for students and developers who want a private, responsive dashboard to organize opportunities, certifications, coding progress, notes, and career activities.
 
 ---
 
