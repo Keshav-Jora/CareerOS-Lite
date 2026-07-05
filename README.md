@@ -22,21 +22,10 @@ A frontend-first Career Operating System designed for students and developers to
 - **XP & Streak Mechanics**: Gamified progress mechanics awarding XP and tracking daily activity streaks to reinforce consistent career growth habits.
 - **Responsive Layout**: Dual-optimized layout featuring a desktop sidebar and a thumb-friendly mobile navigation bar with a quick-capture speed dial.
 - **LocalStorage Persistence**: Client-side state management ensuring fast performance, offline availability, and data privacy without external backend dependencies.
-- **Rule-Based Assistant**: Built-in assistant ("Nova") providing structured, deterministic guidance and quick action prompts for common career management tasks.
+- **Rule-Based Assistant**: Built-in assistant providing structured, deterministic guidance and quick action prompts for common career management tasks.
 
 ---
 
-## Screenshots
-
-> *Note: Screen captures can be added when deploying to open-source project repositories.*
-
-| View | Description |
-| --- | --- |
-| **Desktop Dashboard** | Mission control interface showing pipeline metrics and daily progress. |
-| **Mobile Navigation** | Responsive bottom bar and quick-action menu for mobile devices. |
-| **Opportunity Tracker** | Filterable grid and list view for managing active applications. |
-
----
 
 ## Tech Stack
 
@@ -83,33 +72,36 @@ CareerOS Lite uses a modular, decoupled frontend architecture designed for clean
 
 ## Installation
 
-### Prerequisites
-- **Node.js**: v18.0.0 or higher
-- **npm**: v9.0.0 or higher
+### 1. Clone the repository
 
-### Steps
+```bash
+git clone https://github.com/Keshav-Jora/CareerOS-Lite.git
+cd CareerOS-Lite
+```
 
-1. **Clone the repository**:
-   ```bash
-  git clone https://github.com/Keshav-Jora/CareerOS-Lite.git
-   cd careeros-lite
-   ```
+### 2. Install dependencies
 
-2. **Install dependencies**:
-   ```bash
-   npm install
-   ```
+```bash
+npm install
+```
 
-3. **Start the development server**:
-   ```bash
-   npm run dev
-   ```
-   Open [http://localhost:5173](http://localhost:5173) in your browser.
+### 3. Start the development server
 
-4. **Build for production**:
-   ```bash
-   npm run build
-   ```
+```bash
+npm run dev
+```
+
+Open:
+
+```text
+http://localhost:5173
+```
+
+### 4. Build for production
+
+```bash
+npm run build
+```
 
 ---
 
