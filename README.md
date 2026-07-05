@@ -1,91 +1,109 @@
 # CareerOS Lite
 
-A frontend-first Career Operating System designed for students and developers to organize opportunities, hackathons, certifications, coding progress, and learning milestones.
+A frontend-first Career Operating System built for students and aspiring developers to organize internships, hackathons, certifications, coding progress, notes, and career activities in one place.
 
 ---
 
-## Project Overview
+## 🚀 Live Demo
 
-**CareerOS Lite** is a unified productivity dashboard built specifically for computer science students and job candidates. It consolidates job search pipelines, technical competition deadlines, certification achievements, and daily practice habits into a responsive, local-first web application.
+**🌐 Live Website:**  
+https://career-os-lite.vercel.app/
 
----
-
-## Features
-
-- **Dashboard**: Centralized overview displaying key career metrics, application pipeline stages, upcoming deadlines, and daily activity tracking.
-- **Opportunity Tracker**: Structured ledger for tracking internships, full-time roles, hackathons, fellowships, and research opportunities with status stages.
-- **Upcoming & Calendar**: Dedicated timeline highlighting urgent closing dates and interview schedules.
-- **Journey Timeline**: Chronological record documenting career milestones, hackathon achievements, and major accomplishments.
-- **Progress Analytics**: Quantitative analytics for daily coding hours, DSA problems solved, and project commits over time.
-- **Certificate Vault**: Centralized credential storage for uploading, organizing, and verifying course certificates and badges.
-- **Notes Hub**: Strategy scratchpad for technical interview notes, behavioral STAR framework responses, and preparation materials.
-- **XP & Streak Mechanics**: Gamified progress mechanics awarding XP and tracking daily activity streaks to reinforce consistent career growth habits.
-- **Responsive Layout**: Dual-optimized layout featuring a desktop sidebar and a thumb-friendly mobile navigation bar with a quick-capture speed dial.
-- **LocalStorage Persistence**: Client-side state management ensuring fast performance, offline availability, and data privacy without external backend dependencies.
-- **Rule-Based Assistant**: Built-in assistant providing structured, deterministic guidance and quick action prompts for common career management tasks.
+**💻 GitHub Repository:**  
+https://github.com/Keshav-Jora/CareerOS-Lite
 
 ---
 
+## 📖 Project Overview
 
-## Tech Stack
+CareerOS Lite is a responsive productivity dashboard that helps students manage their career journey. It brings together internship tracking, coding progress, certifications, notes, and career milestones into a single, easy-to-use interface.
 
-- **Frontend Framework**: [React 18+](https://react.dev/) with [TypeScript](https://www.typescriptlang.org/)
-- **Build Tooling**: [Vite](https://vitejs.dev/)
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
-- **Animations**: [Motion](https://motion.dev/) (`motion/react`)
-- **Icons**: [Lucide React](https://lucide.react.dev/)
-- **Data Visualization**: [Recharts](https://recharts.org/)
-- **Delight Mechanics**: [Canvas Confetti](https://www.npmjs.com/package/canvas-confetti)
+The application is privacy-focused and stores user data locally in the browser using LocalStorage, allowing users to manage their career information without requiring an account or backend server.
 
 ---
 
-## Architecture
+## ✨ Features
 
-CareerOS Lite uses a modular, decoupled frontend architecture designed for clean separation of concerns:
+- 📊 Dashboard with career overview and progress summary
+- 💼 Opportunity Tracker for internships, jobs, hackathons and fellowships
+- 📅 Upcoming Deadlines and Calendar view
+- 🛣️ Journey Timeline for recording career milestones
+- 📈 Progress Analytics with charts and activity tracking
+- 🏆 Certificate Vault for organizing achievements
+- 📝 Notes Hub for interview preparation and study notes
+- 🎯 XP & Streak system for motivation and consistency
+- 📱 Fully Responsive UI for desktop and mobile devices
+- 💾 LocalStorage-based data persistence
+- 🤖 Rule-Based Assistant for productivity guidance
+
+---
+
+## 📸 Screenshots
+
+### Dashboard
+
+![Dashboard](assets/screenshots/Dashboard.png)
+
+### Certificates
+
+![Certificates](assets/screenshots/Certificates.png)
+
+### Progress
+
+![Progress](assets/screenshots/Progress.png)
+
+---
+
+## 🛠️ Tech Stack
+
+- React 18
+- TypeScript
+- Vite
+- Tailwind CSS
+- Motion
+- Lucide React
+- Recharts
+- Canvas Confetti
+
+---
+
+## 🏗️ Architecture
+
+CareerOS Lite follows a modular frontend architecture.
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│                      React 18 UI                         │
-│   (App.tsx, View Components, MobileNavigation, Modal)    │
-└────────────────────────────┬─────────────────────────────┘
-                             │
-                             ▼
-┌──────────────────────────────────────────────────────────┐
-│                    Custom Hooks & State                  │
-│                     (useAppData, useTheme)               │
-└────────────────────────────┬─────────────────────────────┘
-                             │
-                             ▼
-┌──────────────────────────────────────────────────────────┐
-│                    Data Service Layer                    │
-│            (dataService.ts, aiService.ts)                │
-└────────────────────────────┬─────────────────────────────┘
-                             │
-                             ▼
-┌──────────────────────────────────────────────────────────┐
-│                   Storage Abstraction                    │
-│               (Browser LocalStorage API)                 │
-└────────────────────────────┴─────────────────────────────┘
+React UI
+    │
+    ▼
+Custom Hooks
+    │
+    ▼
+Service Layer
+    │
+    ▼
+LocalStorage
 ```
+
+The project separates UI components, business logic, and storage to keep the codebase organized and maintainable.
 
 ---
 
-## Installation
+## ⚙️ Installation
 
-### 1. Clone the repository
+### Clone the repository
 
 ```bash
 git clone https://github.com/Keshav-Jora/CareerOS-Lite.git
 cd CareerOS-Lite
 ```
 
-### 2. Install dependencies
+### Install dependencies
 
 ```bash
 npm install
 ```
 
-### 3. Start the development server
+### Start the development server
 
 ```bash
 npm run dev
@@ -93,11 +111,11 @@ npm run dev
 
 Open:
 
-```text
+```
 http://localhost:5173
 ```
 
-### 4. Build for production
+### Build for production
 
 ```bash
 npm run build
@@ -105,24 +123,79 @@ npm run build
 
 ---
 
-## Current Status
+## 📂 Project Structure
 
-CareerOS Lite is a frontend-first career productivity application that stores all user data locally using browser localStorage. It is designed for students and developers who want a private, responsive dashboard to organize opportunities, certifications, coding progress, notes, and career activities.
+```
+CareerOS-Lite
+│
+├── assets/
+│   └── screenshots/
+├── src/
+│   ├── components/
+│   ├── hooks/
+│   ├── services/
+│   ├── utils/
+│   └── main.tsx
+│
+├── public/
+├── package.json
+└── README.md
+```
 
 ---
 
-## Contributing
+## 🔒 Privacy
 
-Contributions are welcome! To contribute:
+CareerOS Lite stores user data locally in the browser using LocalStorage.
 
-1. Fork the repository.
-2. Create a feature branch (`git checkout -b feature/amazing-feature`).
-3. Commit your changes (`git commit -m 'Add amazing feature'`).
-4. Push to the branch (`git push origin feature/amazing-feature`).
+No user data is transmitted to external servers.
+
+Each user's data remains on their own device.
+
+---
+
+## 📌 Current Status
+
+CareerOS Lite is currently a frontend-first application designed for personal career management with local browser storage.
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome.
+
+1. Fork this repository.
+2. Create a feature branch.
+
+```bash
+git checkout -b feature/your-feature
+```
+
+3. Commit your changes.
+
+```bash
+git commit -m "Add your feature"
+```
+
+4. Push your branch.
+
+```bash
+git push origin feature/your-feature
+```
+
 5. Open a Pull Request.
 
 ---
 
-## License
+## 📄 License
 
 This project is licensed under the MIT License.
+
+---
+
+## 👨‍💻 Author
+
+**Keshav Jora**
+
+GitHub:
+https://github.com/Keshav-Jora
