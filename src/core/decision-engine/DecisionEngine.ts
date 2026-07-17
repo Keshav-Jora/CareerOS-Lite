@@ -5,9 +5,13 @@ import { ResponseParser, type ResponseParserError } from './ResponseParser';
 
 export interface DecisionEngineError {
   stage: 'prompt-generation' | 'provider' | 'response-parsing';
-  code: 'prompt-generation-failed' | 'provider-failed' | 'response-parsing-failed';
+  code: 'prompt-generation-failed' | 'provider-failed' | 'provider-timeout' | 'response-parsing-failed';
   message: string;
   parserErrors?: ResponseParserError[];
+}
+
+export interface DecisionEngineOptions {
+  timeoutMs?: number;
 }
 
 export type DecisionEngineResult =
@@ -22,6 +26,7 @@ export class DecisionEngine {
     private readonly provider: AIProvider,
     private readonly promptBuilder: PromptBuilder = new PromptBuilder(),
     private readonly responseParser: ResponseParser = new ResponseParser(),
+    private readonly options: DecisionEngineOptions = {},
   ) {}
 
   async run(careerModel: CareerModel): Promise<DecisionEngineResult> {
@@ -40,10 +45,10 @@ export class DecisionEngine {
       };
     }
 
-    let rawResponse: string;
+    let providerResponse: { timedOut: boolean; rawResponse?: string };
 
     try {
-      rawResponse = await this.provider.generate(prompt);
+      providerResponse = await this.awaitProviderResponse(this.provider.generate(prompt));
     } catch (error) {
       return {
         success: false,
@@ -55,8 +60,19 @@ export class DecisionEngine {
       };
     }
 
+    if (providerResponse.timedOut) {
+      return {
+        success: false,
+        error: {
+          stage: 'provider',
+          code: 'provider-timeout',
+          message: `The AI provider did not respond within ${this.options.timeoutMs} ms.`,
+        },
+      };
+    }
+
     try {
-      const parsedResponse = this.responseParser.parse(rawResponse);
+      const parsedResponse = this.responseParser.parse(providerResponse.rawResponse ?? '');
 
       if ('output' in parsedResponse) {
         return { success: true, output: parsedResponse.output };
@@ -85,5 +101,27 @@ export class DecisionEngine {
 
   private errorMessage(error: unknown, fallback: string): string {
     return error instanceof Error && error.message.trim().length > 0 ? error.message : fallback;
+  }
+
+  private awaitProviderResponse(response: Promise<string>): Promise<{ timedOut: boolean; rawResponse?: string }> {
+    const timeoutMs = this.options.timeoutMs;
+    if (!timeoutMs || timeoutMs <= 0 || !Number.isFinite(timeoutMs)) {
+      return response.then((rawResponse) => ({ timedOut: false, rawResponse }));
+    }
+
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => resolve({ timedOut: true }), timeoutMs);
+
+      response.then(
+        (rawResponse) => {
+          clearTimeout(timeout);
+          resolve({ timedOut: false, rawResponse });
+        },
+        (error: unknown) => {
+          clearTimeout(timeout);
+          reject(error);
+        },
+      );
+    });
   }
 }
