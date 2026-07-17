@@ -84,6 +84,8 @@ export interface Recommendation {
   id: string;
   title: string;
   description: string;
+  confidence: number;
+  reasoning: string;
   category: 'goal' | 'skill' | 'project' | 'application' | 'deadline' | 'general';
   priority: 'low' | 'medium' | 'high';
   status: 'active' | 'accepted' | 'dismissed' | 'completed';
