@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, X, Send, Bot, User, Zap, Database, Cpu } from 'lucide-react';
 import { Opportunity, DailyProgress, TimelineEntry } from '../types';
-import { AIService } from '../services/aiService';
+import { useNovaChat } from '../hooks/useNovaChat';
 
 interface AIAssistantProps {
   theme: 'light' | 'dark';
@@ -11,16 +11,6 @@ interface AIAssistantProps {
   timeline: TimelineEntry[];
   variant?: 'floating' | 'workspace';
 }
-
-interface Message {
-  id: string;
-  sender: 'ai' | 'user';
-  text: string;
-  timestamp: Date;
-  isStreaming?: boolean;
-}
-
-type AssistantState = 'idle' | 'reading' | 'thinking' | 'streaming';
 
 /**
  * Custom Markdown Content Renderer
@@ -136,9 +126,13 @@ function parseInlineMarkdown(text: string) {
 export default function AIAssistant({ theme, opportunities, progress, timeline, variant = 'floating' }: AIAssistantProps) {
   const isWorkspace = variant === 'workspace';
   const [isOpen, setIsOpen] = useState(isWorkspace);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [inputText, setInputText] = useState('');
-  const [assistantState, setAssistantState] = useState<AssistantState>('idle');
+  const userName = localStorage.getItem('career_os_user_name') || 'Student';
+  const { messages, inputText, setInputText, assistantState, sendMessage } = useNovaChat({
+    opportunities,
+    progress,
+    timeline,
+    userName,
+  });
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto scroll to bottom
@@ -150,8 +144,7 @@ export default function AIAssistant({ theme, opportunities, progress, timeline, 
     scrollToBottom();
   }, [messages, assistantState]);
 
-  // Initial Contextual Greeting on mount
-  useEffect(() => {
+  /* Legacy mock greeting removed in favor of useNovaChat.
     const today = new Date().toISOString().split('T')[0];
     const todayProgress = progress.find((p) => p.date === today);
     const pendingOpps = opportunities.filter((o) => o.status === 'Interview' || o.status === 'Applied');
@@ -191,7 +184,7 @@ export default function AIAssistant({ theme, opportunities, progress, timeline, 
         timestamp: new Date(),
       },
     ]);
-  }, [opportunities, progress]);
+  */
 
   useEffect(() => {
     if (isWorkspace) return;
@@ -200,8 +193,7 @@ export default function AIAssistant({ theme, opportunities, progress, timeline, 
     return () => window.removeEventListener('open-ai-assistant', handleOpen);
   }, [isWorkspace]);
 
-  // Handle Send Message
-  const handleSendMessage = async (text: string) => {
+  /* Legacy mock request flow removed in favor of useNovaChat.
     if (!text.trim() || assistantState !== 'idle') return;
 
     // 1. Add User Message
@@ -253,7 +245,7 @@ export default function AIAssistant({ theme, opportunities, progress, timeline, 
       prev.map((msg) => (msg.id === aiMsgId ? { ...msg, isStreaming: false } : msg))
     );
     setAssistantState('idle');
-  };
+  */
 
   // Close Nova assistant on Escape key
   useEffect(() => {
@@ -385,25 +377,25 @@ export default function AIAssistant({ theme, opportunities, progress, timeline, 
                 <div
                   key={msg.id}
                   className={`flex gap-2.5 max-w-[88%] ${
-                    msg.sender === 'user' ? 'ml-auto flex-row-reverse' : ''
+                    msg.role === 'user' ? 'ml-auto flex-row-reverse' : ''
                   }`}
                 >
                   <div
                     className={`h-7 w-7 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${
-                      msg.sender === 'user'
+                      msg.role === 'user'
                         ? 'bg-indigo-600 text-white'
                         : theme === 'dark'
                         ? 'bg-slate-900 border border-slate-800 text-indigo-400'
                         : 'bg-indigo-50 text-indigo-600 border border-indigo-100'
                     }`}
                   >
-                    {msg.sender === 'user' ? <User className="h-3.5 w-3.5" aria-hidden="true" /> : <Bot className="h-3.5 w-3.5" aria-hidden="true" />}
+                    {msg.role === 'user' ? <User className="h-3.5 w-3.5" aria-hidden="true" /> : <Bot className="h-3.5 w-3.5" aria-hidden="true" />}
                   </div>
 
                   <div className="space-y-1 min-w-0">
                     <div
                       className={`px-3.5 py-2.5 rounded-2xl ${
-                        msg.sender === 'user'
+                        msg.role === 'user'
                           ? 'bg-indigo-600 text-white rounded-tr-none shadow-md'
                           : theme === 'dark'
                           ? 'bg-slate-900/80 border border-slate-800/80 text-slate-200 rounded-tl-none shadow-sm'
@@ -455,7 +447,7 @@ export default function AIAssistant({ theme, opportunities, progress, timeline, 
                   type="button"
                   key={idx}
                   disabled={assistantState !== 'idle'}
-                  onClick={() => handleSendMessage(p.query)}
+                  onClick={() => sendMessage(p.query)}
                   aria-label={p.label}
                   className={`px-2.5 py-1.5 rounded-xl border text-[10px] font-medium whitespace-nowrap transition-all flex items-center gap-1 shrink-0 ${
                     theme === 'dark'
@@ -474,7 +466,7 @@ export default function AIAssistant({ theme, opportunities, progress, timeline, 
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
-                  handleSendMessage(inputText);
+                  sendMessage(inputText);
                 }}
                 className="flex items-center gap-2"
               >
