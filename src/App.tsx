@@ -8,7 +8,6 @@ import { useAppData } from './hooks/useAppData';
 import { CloudSyncService } from './services/cloud/CloudSyncService';
 import { SessionManager } from './services/auth/SessionManager';
 import { AuthService } from './services/auth/AuthService';
-import { AuthControls } from './components/AuthControls';
 
 // Component Imports
 import Sidebar from './components/Sidebar';
@@ -183,6 +182,11 @@ export default function App() {
             onRefreshData={loadDatabase}
             onResetData={handleResetData}
             onLoadSeedData={handleLoadSeedData}
+            authUser={sessionUser}
+            syncStatus={syncStatus}
+            onSignIn={signIn}
+            onSignOut={signOut}
+            authBusy={authBusy}
           />
         );
       default:
@@ -240,8 +244,6 @@ export default function App() {
 
       {/* Main Workspace Frame */}
       <main className="flex-1 h-screen overflow-y-auto px-4 sm:px-6 md:px-10 py-4 md:py-8 pb-28 md:pb-8 relative z-10">
-        <div className="absolute right-4 top-4 z-20 sm:right-6 md:right-10 md:top-6"><AuthControls user={sessionUser} syncStatus={syncStatus} onSignIn={signIn} onSignOut={signOut} busy={authBusy} /></div>
-        {!sessionUser && <div className="mx-auto mb-5 flex max-w-7xl items-center justify-between gap-3 rounded-2xl border border-indigo-400/15 bg-indigo-500/5 px-4 py-3 pr-40 text-xs text-slate-300"><span><strong>Guest Mode.</strong> Sign in to sync your career data across devices.</span><button type="button" onClick={signIn} className="shrink-0 font-semibold text-indigo-300 hover:text-indigo-200">Continue with Google</button></div>}
         <AnimatePresence mode="wait">
           <motion.div
             key={currentView}

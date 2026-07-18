@@ -11,6 +11,8 @@ import {
   Info,
 } from 'lucide-react';
 import { exportDataJSON, importDataJSON } from '../utils/storage';
+import type { User as FirebaseUser } from 'firebase/auth';
+import { AuthControls } from './AuthControls';
 
 interface SettingsViewProps {
   theme: 'light' | 'dark';
@@ -18,9 +20,14 @@ interface SettingsViewProps {
   onRefreshData: () => void;
   onResetData?: () => void;
   onLoadSeedData?: () => void;
+  authUser: FirebaseUser | null;
+  syncStatus: 'synced' | 'syncing' | 'offline';
+  onSignIn: () => void;
+  onSignOut: () => void;
+  authBusy: boolean;
 }
 
-export default function SettingsView({ theme, onToggleTheme, onRefreshData, onResetData, onLoadSeedData }: SettingsViewProps) {
+export default function SettingsView({ theme, onToggleTheme, onRefreshData, onResetData, onLoadSeedData, authUser, syncStatus, onSignIn, onSignOut, authBusy }: SettingsViewProps) {
   // Local Profile Settings (persisted to LocalStorage for profile mapping)
   const [name, setName] = useState(() => localStorage.getItem('career_os_user_name') || 'Student');
   const [affiliation, setAffiliation] = useState(
@@ -124,6 +131,10 @@ export default function SettingsView({ theme, onToggleTheme, onRefreshData, onRe
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Left Span: Profile Configuration */}
         <div className="md:col-span-2 space-y-6">
+          <div className={`p-5 rounded-2xl border ${theme === 'dark' ? 'glass-panel-dark' : 'glass-panel-light'}`}>
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Account & Sync</p>
+            <div className="mt-3 flex items-center justify-between gap-4"><div><p className="text-sm font-semibold text-slate-100">{authUser ? authUser.displayName ?? 'CareerOS Account' : 'Guest profile'}</p><p className="mt-1 text-xs text-slate-400">{authUser ? authUser.email : 'Sign in to keep your career data synced across devices.'}</p></div><AuthControls user={authUser} syncStatus={syncStatus} onSignIn={onSignIn} onSignOut={onSignOut} busy={authBusy} /></div>
+          </div>
           <div
             className={`p-5 rounded-2xl border ${
               theme === 'dark' ? 'glass-panel-dark' : 'glass-panel-light'

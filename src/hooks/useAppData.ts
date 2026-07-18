@@ -45,6 +45,11 @@ export function useAppData() {
     loadDatabase();
   }, [loadDatabase]);
 
+  useEffect(() => {
+    window.addEventListener('career-os-data-changed', loadDatabase);
+    return () => window.removeEventListener('career-os-data-changed', loadDatabase);
+  }, [loadDatabase]);
+
   // Gamification stats memoized to prevent re-computations on unrelated state updates
   const gamification: GamificationStats = useMemo(
     () =>

@@ -80,6 +80,6 @@ export class ActionRouter {
   }
 }
 
-function success(message: string): NovaActionResult { return { status: 'executed', message }; }
+function success(message: string): NovaActionResult { window.dispatchEvent(new Event('career-os-data-changed')); return { status: 'executed', message }; }
 function failure(message: string, intent?: NovaActionIntent): NovaActionResult { return { status: 'failed', message, intent }; }
 function describe(intent: NovaActionIntent): string { return `${intent.type.replaceAll('_', ' ')} ${intent.entity}`; }
