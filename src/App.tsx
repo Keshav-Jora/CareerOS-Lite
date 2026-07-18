@@ -64,6 +64,7 @@ export default function App() {
             theme={theme}
             opportunities={opportunities}
             progress={progressData}
+            timelineEntries={timelineEntries}
             activities={activities}
             certificates={certificates}
             notes={notes}

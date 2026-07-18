@@ -1,25 +1,32 @@
+import { useState } from 'react';
 import { motion } from 'motion/react';
 import {
   ArrowRight,
   BrainCircuit,
-  CalendarClock,
+  CalendarDays,
+  Check,
   CheckCircle2,
   ChevronRight,
+  CircleAlert,
+  Clock3,
   FileText,
   Flame,
   ListTodo,
   Plus,
+  Search,
+  ShieldCheck,
   Sparkles,
   Target,
   TrendingUp,
 } from 'lucide-react';
-import type { ActivityLog, Certificate, DailyProgress, Note, Opportunity } from '../types';
-import { useCommandCenter } from '../hooks/useCommandCenter';
+import type { ActivityLog, Certificate, DailyProgress, Note, Opportunity, TimelineEntry } from '../types';
+import { useDashboardIntelligence } from '../hooks/useDashboardIntelligence';
 
 interface DashboardViewProps {
   theme: 'light' | 'dark';
   opportunities: Opportunity[];
   progress: DailyProgress[];
+  timelineEntries: TimelineEntry[];
   activities: ActivityLog[];
   certificates: Certificate[];
   notes: Note[];
@@ -45,194 +52,157 @@ export default function DashboardView({
   theme,
   opportunities,
   progress,
-  certificates = [],
+  timelineEntries,
+  activities,
+  certificates,
+  notes,
   onAddOpportunityTrigger,
   onNavigateToView,
   userName = 'Student',
 }: DashboardViewProps) {
-  const commandCenter = useCommandCenter({ opportunities, progress, certificates });
-  const topAction = commandCenter.actionForRecommendation(commandCenter.topRecommendation);
+  const [missionComplete, setMissionComplete] = useState(false);
+  const intelligence = useDashboardIntelligence({
+    opportunities,
+    progress,
+    timelineEntries,
+    activities,
+    certificates,
+    notes,
+    userName,
+  });
+  const { recommendation, featuredOpportunity } = intelligence;
   const isDark = theme === 'dark';
-  const greeting = getGreeting();
-  const estimatedImpact = commandCenter.topRecommendation.priority === 'high'
-    ? 'High impact'
-    : commandCenter.topRecommendation.priority === 'medium'
-      ? 'Meaningful impact'
-      : 'Steady impact';
+  const surface = isDark ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-white/90 shadow-sm';
+  const mutedText = isDark ? 'text-slate-400' : 'text-slate-600';
+  const headingText = isDark ? 'text-white' : 'text-slate-950';
+  const trendLabel = intelligence.weeklyTrend === 0
+    ? 'Stable this week'
+    : `${intelligence.weeklyTrend > 0 ? '↑' : '↓'} ${Math.abs(intelligence.weeklyTrend)}h this week`;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 pb-6">
-      <div className="flex flex-wrap items-center justify-between gap-3 px-1 text-xs">
-        <div className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 ${
-          isDark ? 'border-slate-800 bg-slate-900/70 text-slate-400' : 'border-slate-200 bg-white/80 text-slate-600'
-        }`}>
-          <span className="relative flex h-2 w-2" aria-hidden="true">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
-          </span>
-          {commandCenter.analysisLabel}
-        </div>
-        <div className={`flex items-center gap-3 font-medium ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
-          <span>{commandCenter.monitoredOpportunities} opportunities monitored</span>
-          <span className="hidden sm:inline">{commandCenter.watchedDeadlines} deadlines watched</span>
-        </div>
-      </div>
-
-      <section className={`relative overflow-hidden rounded-3xl border p-6 sm:p-8 md:p-10 ${
-        isDark ? 'border-slate-800 bg-slate-900/65 shadow-2xl shadow-slate-950/20' : 'border-slate-200 bg-white/85 shadow-xl shadow-slate-200/40'
-      }`} aria-labelledby="command-center-title">
-        <div className="pointer-events-none absolute -right-24 -top-28 h-72 w-72 rounded-full bg-indigo-500/10 blur-3xl" />
-        <div className="pointer-events-none absolute bottom-0 left-1/3 h-36 w-72 rounded-full bg-purple-500/5 blur-3xl" />
-        <div className="relative max-w-3xl">
-          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-indigo-400/20 bg-indigo-500/10 px-3 py-1.5 text-xs font-semibold text-indigo-300">
-            <BrainCircuit className="h-3.5 w-3.5" aria-hidden="true" />
-            AI Brief
-          </div>
-          <p className={`text-sm font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{greeting}, {userName}.</p>
-          <h1 id="command-center-title" className={`mt-2 font-display text-3xl font-bold tracking-tight sm:text-4xl ${
-            isDark ? 'text-white' : 'text-slate-900'
-          }`}>
-            Your next best move is clear.
-          </h1>
-          <p className={`mt-4 max-w-2xl text-base leading-7 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-            I analyzed your current career context and found one action with the strongest near-term leverage.
+    <div className="mx-auto max-w-7xl space-y-6 pb-8">
+      <header className="flex flex-col gap-4 px-1 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className={`text-sm font-medium ${mutedText}`}>{getGreeting()}, {userName}.</p>
+          <h1 className={`mt-1 font-display text-3xl font-bold tracking-tight sm:text-4xl ${headingText}`}>Your career, in motion.</h1>
+          <p className={`mt-2 max-w-2xl text-sm leading-6 ${mutedText}`}>
+            Current focus: <span className={isDark ? 'font-semibold text-indigo-300' : 'font-semibold text-indigo-600'}>{recommendation.highestPriority.title}</span>
           </p>
-          <div className="mt-6 flex flex-wrap gap-3 text-sm">
-            <span className="rounded-lg border border-indigo-400/20 bg-indigo-500/10 px-3 py-2 font-medium text-indigo-300">
-              Confidence {Math.round(commandCenter.topRecommendation.confidence * 100)}%
-            </span>
-            <span className={`rounded-lg border px-3 py-2 font-medium ${
-              isDark ? 'border-slate-700 bg-slate-950/40 text-slate-300' : 'border-slate-200 bg-slate-50 text-slate-600'
-            }`}>{estimatedImpact}</span>
+        </div>
+        <div className="flex flex-wrap items-center gap-3 text-xs">
+          <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 ${isDark ? 'border-slate-800 bg-slate-900 text-slate-400' : 'border-slate-200 bg-white text-slate-600'}`}>
+            <span className="relative flex h-2 w-2" aria-hidden="true"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" /><span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" /></span>
+            AI analysis refreshed now
+          </span>
+          <button type="button" onClick={() => onNavigateToView('nova')} className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 font-semibold transition hover:border-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${isDark ? 'border-slate-700 bg-slate-900 text-slate-300' : 'border-slate-200 bg-white text-slate-700'}`}>
+            <Search className="h-3.5 w-3.5" aria-hidden="true" /> Quick search
+          </button>
+        </div>
+      </header>
+
+      <section className={`relative overflow-hidden rounded-3xl border p-6 sm:p-8 ${surface}`} aria-labelledby="career-health-title">
+        <div className="pointer-events-none absolute -right-28 -top-28 h-80 w-80 rounded-full bg-indigo-500/10 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 left-1/4 h-48 w-80 rounded-full bg-violet-500/10 blur-3xl" />
+        <div className="relative grid gap-8 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:items-center">
+          <motion.div initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.45 }} className="relative mx-auto grid h-44 w-44 place-items-center rounded-full p-3" style={{ background: `conic-gradient(#818cf8 ${recommendation.careerHealthScore * 3.6}deg, ${isDark ? '#1e293b' : '#e2e8f0'} 0deg)` }}>
+            <div className={`grid h-full w-full place-items-center rounded-full ${isDark ? 'bg-slate-950' : 'bg-white'}`}>
+              <div className="text-center"><p className={`font-display text-4xl font-bold ${headingText}`}>{recommendation.careerHealthScore}</p><p className={`mt-1 text-xs font-semibold uppercase tracking-[0.16em] ${mutedText}`}>of 100</p></div>
+            </div>
+          </motion.div>
+          <div>
+            <div className="flex items-center gap-2 text-sm font-semibold text-indigo-400"><ShieldCheck className="h-4 w-4" aria-hidden="true" /> Career health</div>
+            <h2 id="career-health-title" className={`mt-3 font-display text-2xl font-bold tracking-tight sm:text-3xl ${headingText}`}>A clear picture of your momentum.</h2>
+            <p className={`mt-3 max-w-xl text-sm leading-6 ${mutedText}`}>{recommendation.highestPriority.rationale}</p>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <MetricPill label="Weekly trend" value={trendLabel} isDark={isDark} />
+              <MetricPill label="Data confidence" value={`${intelligence.confidence}%`} isDark={isDark} />
+              <MetricPill label="Active pipeline" value={`${opportunities.filter((item) => !['Completed', 'Selected', 'Rejected'].includes(item.status)).length} opportunities`} isDark={isDark} />
+            </div>
+          </div>
+          <div className={`rounded-2xl border p-4 ${isDark ? 'border-indigo-400/20 bg-indigo-500/10' : 'border-indigo-100 bg-indigo-50/80'}`}>
+            <p className={`text-xs font-semibold uppercase tracking-[0.14em] ${isDark ? 'text-indigo-300' : 'text-indigo-600'}`}>What changes the score</p>
+            <p className={`mt-2 max-w-52 text-sm leading-6 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Complete your next best action, then log the outcome to keep Nova’s view accurate.</p>
           </div>
         </div>
       </section>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.55fr)_minmax(280px,0.85fr)]">
-        <section className={`rounded-3xl border p-6 sm:p-7 ${
-          isDark ? 'border-slate-800 bg-slate-900/50' : 'border-slate-200 bg-white/85'
-        }`} aria-labelledby="top-priority-title">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2 text-sm font-semibold text-amber-400">
-                <Flame className="h-4 w-4" aria-hidden="true" />
-                Top priority
-              </div>
-              <h2 id="top-priority-title" className={`mt-3 font-display text-2xl font-bold tracking-tight ${
-                isDark ? 'text-white' : 'text-slate-900'
-              }`}>{commandCenter.topRecommendation.title}</h2>
+      <section className={`rounded-3xl border p-6 sm:p-7 ${surface}`} aria-labelledby="nova-recommendation-title">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0 max-w-3xl">
+            <div className="flex items-center gap-2 text-sm font-semibold text-violet-400"><BrainCircuit className="h-4 w-4" aria-hidden="true" /> Nova recommendation</div>
+            <h2 id="nova-recommendation-title" className={`mt-3 font-display text-2xl font-bold tracking-tight ${headingText}`}>{recommendation.highestPriority.title}</h2>
+            <p className={`mt-3 text-sm leading-6 ${mutedText}`}>{recommendation.highestPriority.description}</p>
+            <div className={`mt-5 border-l-2 pl-4 ${isDark ? 'border-violet-400/60' : 'border-violet-500'}`}>
+              <p className={`text-xs font-semibold uppercase tracking-[0.14em] ${mutedText}`}>Evidence</p>
+              <p className={`mt-1 text-sm leading-6 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{recommendation.highestPriority.rationale}</p>
             </div>
-            <span className={`rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${
-              commandCenter.topRecommendation.priority === 'high'
-                ? 'bg-rose-500/10 text-rose-300'
-                : 'bg-indigo-500/10 text-indigo-300'
-            }`}>{commandCenter.topRecommendation.priority}</span>
           </div>
-
-          <div className={`mt-5 border-l-2 pl-4 ${isDark ? 'border-indigo-400/50 text-slate-400' : 'border-indigo-500/50 text-slate-600'}`}>
-            <p className="text-sm font-medium">Why it matters</p>
-            <p className="mt-1 text-sm leading-6">{commandCenter.topRecommendation.description}</p>
+          <div className="grid min-w-[220px] grid-cols-2 gap-3">
+            <RecommendationMetric label="Impact" value={intelligence.expectedImpact} isDark={isDark} />
+            <RecommendationMetric label="Confidence" value={`${intelligence.confidence}%`} isDark={isDark} />
+            <RecommendationMetric label="Estimated time" value={intelligence.estimatedDuration} isDark={isDark} />
+            <RecommendationMetric label="Priority" value={recommendation.highestPriority.priority} isDark={isDark} />
           </div>
-
-          <details className={`mt-5 rounded-xl border px-4 py-3 text-sm ${
-            isDark ? 'border-slate-800 bg-slate-950/35 text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-600'
-          }`}>
-            <summary className="cursor-pointer font-medium text-slate-300 marker:text-indigo-400">See AI reasoning</summary>
-            <p className="mt-3 whitespace-pre-line leading-6">{commandCenter.topExplanation}</p>
+        </div>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <details className={`rounded-xl border px-4 py-2.5 text-sm ${isDark ? 'border-slate-700 bg-slate-950/40 text-slate-300' : 'border-slate-200 bg-slate-50 text-slate-700'}`}>
+            <summary className="cursor-pointer font-semibold">Why?</summary>
+            <p className={`mt-3 max-w-2xl text-sm leading-6 ${mutedText}`}>Nova prioritizes this because it is the clearest action supported by your current CareerOS data. It is not a prediction or a completed action.</p>
           </details>
-
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
-            <div className={`flex items-center gap-2 text-sm ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
-              <Sparkles className="h-4 w-4 text-indigo-400" aria-hidden="true" />
-              Estimated impact: <span className="font-semibold text-indigo-300">{estimatedImpact}</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => onNavigateToView(topAction.destination)}
-              className="inline-flex items-center gap-2 rounded-xl bg-indigo-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 transition hover:bg-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
-            >
-              {topAction.label}
-              <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </button>
-          </div>
-        </section>
-
-        <section className={`rounded-3xl border p-6 ${
-          isDark ? 'border-slate-800 bg-slate-900/50' : 'border-slate-200 bg-white/85'
-        }`} aria-labelledby="today-plan-title">
-          <div className="flex items-center gap-2">
-            <CalendarClock className="h-4 w-4 text-indigo-400" aria-hidden="true" />
-            <h2 id="today-plan-title" className={`font-display text-lg font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>Today's plan</h2>
-          </div>
-          <p className={`mt-1 text-sm ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>Three focused moves, ordered by impact.</p>
-          <ol className="mt-5 space-y-4">
-            {commandCenter.todayPlan.map((recommendation, index) => {
-              const action = commandCenter.actionForRecommendation(recommendation);
-              return (
-                <li key={recommendation.id} className="flex gap-3">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-500/10 text-xs font-bold text-indigo-300">{index + 1}</span>
-                  <button
-                    type="button"
-                    onClick={() => onNavigateToView(action.destination)}
-                    className={`group min-w-0 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${
-                      isDark ? 'text-slate-300 hover:text-white' : 'text-slate-700 hover:text-slate-950'
-                    }`}
-                  >
-                    <span className="block font-medium">{recommendation.title}</span>
-                    <span className={`mt-0.5 block text-xs leading-5 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>{recommendation.description}</span>
-                  </button>
-                </li>
-              );
-            })}
-          </ol>
-        </section>
-      </div>
-
-      <section aria-labelledby="quick-actions-title">
-        <div className="mb-3 flex items-center gap-2 px-1">
-          <ListTodo className="h-4 w-4 text-indigo-400" aria-hidden="true" />
-          <h2 id="quick-actions-title" className={`font-display text-lg font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>Quick actions</h2>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {quickActions.map((action) => {
-            const Icon = action.icon;
-            const onClick = action.destination === 'opportunities' ? onAddOpportunityTrigger : () => onNavigateToView(action.destination);
-            return (
-              <motion.button
-                type="button"
-                whileHover={{ y: -2 }}
-                whileTap={{ scale: 0.98 }}
-                key={action.label}
-                onClick={onClick}
-                className={`group flex items-center gap-4 rounded-2xl border p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${
-                  isDark ? 'border-slate-800 bg-slate-900/50 hover:border-slate-700 hover:bg-slate-900' : 'border-slate-200 bg-white/85 hover:border-slate-300'
-                }`}
-              >
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-300 transition group-hover:bg-indigo-500/20">
-                  <Icon className="h-5 w-5" aria-hidden="true" />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className={`block text-sm font-semibold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{action.label}</span>
-                  <span className={`mt-0.5 block text-xs ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>{action.description}</span>
-                </span>
-                <ChevronRight className={`h-4 w-4 ${isDark ? 'text-slate-600' : 'text-slate-400'}`} aria-hidden="true" />
-              </motion.button>
-            );
-          })}
+          <button type="button" onClick={() => setMissionComplete((complete) => !complete)} aria-pressed={missionComplete} className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${missionComplete ? 'bg-emerald-500 text-slate-950' : isDark ? 'bg-emerald-400/10 text-emerald-300 hover:bg-emerald-400/20' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}`}>
+            <Check className="h-4 w-4" aria-hidden="true" /> {missionComplete ? 'Marked done' : 'Mark done'}
+          </button>
+          <button type="button" onClick={() => onNavigateToView('nova')} className="inline-flex items-center gap-2 rounded-xl bg-indigo-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 transition hover:bg-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400">
+            Ask Nova <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </button>
         </div>
       </section>
 
-      <div className={`flex items-center gap-2 px-1 text-xs ${isDark ? 'text-slate-600' : 'text-slate-500'}`}>
-        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" aria-hidden="true" />
-        Everything is up to date. Your Command Center will refresh as your career data changes.
+      <div className="grid gap-6 xl:grid-cols-2">
+        <section className={`rounded-3xl border p-6 ${surface}`} aria-labelledby="mission-title">
+          <div className="flex items-center justify-between gap-4"><div><div className="flex items-center gap-2 text-sm font-semibold text-amber-400"><Target className="h-4 w-4" aria-hidden="true" /> Today’s mission</div><h2 id="mission-title" className={`mt-2 font-display text-xl font-bold ${headingText}`}>{recommendation.todayMission.title}</h2></div><span className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide ${priorityClass(recommendation.todayMission.priority)}`}>{recommendation.todayMission.priority}</span></div>
+          <p className={`mt-3 text-sm leading-6 ${mutedText}`}>{recommendation.todayMission.description}</p>
+          <div className={`mt-5 grid grid-cols-3 divide-x rounded-xl border ${isDark ? 'divide-slate-800 border-slate-800 bg-slate-950/35' : 'divide-slate-200 border-slate-200 bg-slate-50'}`}><MissionMetric label="Duration" value={intelligence.estimatedDuration} /><MissionMetric label="Impact" value={intelligence.expectedImpact} /><MissionMetric label="Status" value={missionComplete ? 'Complete' : 'Open'} /></div>
+        </section>
+
+        <section className={`rounded-3xl border p-6 ${surface}`} aria-labelledby="highest-priority-title">
+          <div className="flex items-center gap-2 text-sm font-semibold text-rose-400"><Flame className="h-4 w-4" aria-hidden="true" /> Highest priority</div>
+          <h2 id="highest-priority-title" className={`mt-3 font-display text-xl font-bold ${headingText}`}>{recommendation.highestPriority.title}</h2>
+          <p className={`mt-3 text-sm leading-6 ${mutedText}`}>{recommendation.highestPriority.rationale}</p>
+          <button type="button" onClick={() => onNavigateToView('nova')} className={`mt-5 inline-flex items-center gap-2 text-sm font-semibold ${isDark ? 'text-indigo-300 hover:text-indigo-200' : 'text-indigo-600 hover:text-indigo-700'} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400`}>Explore the plan with Nova <ArrowRight className="h-4 w-4" aria-hidden="true" /></button>
+        </section>
       </div>
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(300px,0.75fr)]">
+        <section className={`rounded-3xl border p-6 ${surface}`} aria-labelledby="top-opportunity-title">
+          <div className="flex items-center justify-between gap-4"><div className="flex items-center gap-2 text-sm font-semibold text-sky-400"><CalendarDays className="h-4 w-4" aria-hidden="true" /> Top opportunity</div><button type="button" onClick={() => onNavigateToView('opportunities')} className={`inline-flex items-center gap-1 text-xs font-semibold ${isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-950'}`}>View all <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" /></button></div>
+          {featuredOpportunity ? <FeaturedOpportunityCard featured={featuredOpportunity} isDark={isDark} onView={() => onNavigateToView('opportunities')} /> : <EmptyOpportunityState isDark={isDark} onAdd={onAddOpportunityTrigger} />}
+        </section>
+
+        <section className={`rounded-3xl border p-6 ${surface}`} aria-labelledby="momentum-title">
+          <div className="flex items-center gap-2 text-sm font-semibold text-emerald-400"><TrendingUp className="h-4 w-4" aria-hidden="true" /> Learning momentum</div>
+          <h2 id="momentum-title" className={`mt-3 font-display text-xl font-bold ${headingText}`}>{intelligence.streak} day learning streak</h2>
+          <p className={`mt-2 text-sm ${mutedText}`}>{intelligence.weeklyProgress}% of this week has recorded learning activity.</p>
+          <div className={`mt-5 h-3 overflow-hidden rounded-full ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`} aria-label={`${intelligence.weeklyProgress}% weekly learning progress`} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={intelligence.weeklyProgress}><motion.div initial={{ width: 0 }} animate={{ width: `${intelligence.weeklyProgress}%` }} transition={{ duration: 0.7, ease: 'easeOut' }} className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-teal-400" /></div>
+          <div className="mt-5 flex items-end gap-1.5" aria-label="Seven-day activity visualization">{Array.from({ length: 7 }, (_, index) => <motion.span key={index} initial={{ scaleY: 0 }} animate={{ scaleY: 0.35 + ((intelligence.weeklyProgress / 100) * ((index % 3) + 1) / 3) }} transition={{ duration: 0.35, delay: index * 0.05 }} className={`h-10 flex-1 origin-bottom rounded-sm ${isDark ? 'bg-emerald-400/45' : 'bg-emerald-400/60'}`} />)}</div>
+        </section>
+      </div>
+
+      <section className={`rounded-3xl border p-6 ${surface}`} aria-labelledby="decision-memory-title">
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center"><div><div className="flex items-center gap-2 text-sm font-semibold text-fuchsia-400"><Sparkles className="h-4 w-4" aria-hidden="true" /> Decision memory</div><h2 id="decision-memory-title" className={`mt-2 font-display text-lg font-bold ${headingText}`}>{recommendation.nextBestAction.title}</h2><p className={`mt-1 text-sm ${mutedText}`}>{intelligence.latestActivity ? `Latest recorded outcome: ${intelligence.latestActivity.action}` : 'Outcome tracking begins when you log progress in your Journey.'}</p></div><button type="button" onClick={() => onNavigateToView('journey')} className={`inline-flex items-center gap-2 text-sm font-semibold ${isDark ? 'text-indigo-300 hover:text-indigo-200' : 'text-indigo-600 hover:text-indigo-700'} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400`}>Open Journey <ArrowRight className="h-4 w-4" aria-hidden="true" /></button></div>
+      </section>
+
+      <section aria-labelledby="quick-actions-title"><div className="mb-3 flex items-center gap-2 px-1"><ListTodo className="h-4 w-4 text-indigo-400" aria-hidden="true" /><h2 id="quick-actions-title" className={`font-display text-lg font-bold ${headingText}`}>Quick actions</h2></div><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{quickActions.map((action) => { const Icon = action.icon; const onClick = action.destination === 'opportunities' ? onAddOpportunityTrigger : () => onNavigateToView(action.destination); return <motion.button type="button" whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }} key={action.label} onClick={onClick} className={`group flex items-center gap-4 rounded-2xl border p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${surface}`}><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-300 transition group-hover:bg-indigo-500/20"><Icon className="h-5 w-5" aria-hidden="true" /></span><span className="min-w-0 flex-1"><span className={`block text-sm font-semibold ${headingText}`}>{action.label}</span><span className={`mt-0.5 block text-xs ${mutedText}`}>{action.description}</span></span><ChevronRight className={`h-4 w-4 ${isDark ? 'text-slate-600' : 'text-slate-400'}`} aria-hidden="true" /></motion.button>; })}</div></section>
+
+      <div className={`flex items-center gap-2 px-1 text-xs ${isDark ? 'text-slate-600' : 'text-slate-500'}`}><CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" aria-hidden="true" /> This Command Center refreshes whenever your CareerOS data changes.</div>
     </div>
   );
 }
 
-function getGreeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
-}
+function MetricPill({ label, value, isDark }: { label: string; value: string; isDark: boolean }) { return <span className={`rounded-xl border px-3 py-2 text-xs ${isDark ? 'border-slate-700 bg-slate-950/30 text-slate-300' : 'border-slate-200 bg-white text-slate-700'}`}><span className={`mr-1.5 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>{label}</span><span className="font-semibold">{value}</span></span>; }
+function RecommendationMetric({ label, value, isDark }: { label: string; value: string; isDark: boolean }) { return <div className={`rounded-xl border p-3 ${isDark ? 'border-slate-800 bg-slate-950/35' : 'border-slate-200 bg-slate-50'}`}><p className={`text-[11px] font-semibold uppercase tracking-wide ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>{label}</p><p className={`mt-1 text-sm font-semibold capitalize ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{value}</p></div>; }
+function MissionMetric({ label, value }: { label: string; value: string }) { return <div className="min-w-0 px-3 py-3 text-center"><p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{label}</p><p className="mt-1 truncate text-xs font-semibold text-slate-300">{value}</p></div>; }
+function FeaturedOpportunityCard({ featured, isDark, onView }: { featured: ReturnType<typeof useDashboardIntelligence>['featuredOpportunity'] & {}; isDark: boolean; onView: () => void }) { if (!featured) return null; const { opportunity, reason, matchScore, requiredSkills, daysUntilDeadline } = featured; return <div className="mt-5"><h2 id="top-opportunity-title" className={`font-display text-xl font-bold ${isDark ? 'text-white' : 'text-slate-950'}`}>{opportunity.title}</h2><p className={`mt-1 text-sm ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>{opportunity.organization} · {reason}</p><div className="mt-5 grid gap-3 sm:grid-cols-3"><RecommendationMetric label="Deadline" value={daysUntilDeadline === null ? 'Not set' : daysUntilDeadline === 0 ? 'Today' : `${daysUntilDeadline} days`} isDark={isDark} /><RecommendationMetric label="Match score" value={matchScore === null ? 'Needs skills' : `${matchScore}%`} isDark={isDark} /><RecommendationMetric label="Required skills" value={requiredSkills.length ? `${requiredSkills.length} listed` : 'Not listed'} isDark={isDark} /></div>{requiredSkills.length > 0 && <p className={`mt-4 text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Skills: {requiredSkills.join(' · ')}</p>}<button type="button" onClick={onView} className="mt-5 inline-flex items-center gap-2 rounded-xl bg-indigo-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400">View details <ArrowRight className="h-4 w-4" aria-hidden="true" /></button></div>; }
+function EmptyOpportunityState({ isDark, onAdd }: { isDark: boolean; onAdd: () => void }) { return <div className={`mt-5 rounded-2xl border border-dashed p-5 ${isDark ? 'border-slate-700 bg-slate-950/30' : 'border-slate-300 bg-slate-50'}`}><CircleAlert className="h-5 w-5 text-amber-400" aria-hidden="true" /><p className={`mt-3 text-sm font-semibold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>No featured opportunity yet</p><p className={`mt-1 text-sm ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Capture an opportunity to let CareerOS prioritize deadlines and fit.</p><button type="button" onClick={onAdd} className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-indigo-400 hover:text-indigo-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400">Capture opportunity <ArrowRight className="h-4 w-4" aria-hidden="true" /></button></div>; }
+function priorityClass(priority: string): string { return priority === 'critical' || priority === 'high' ? 'bg-rose-500/10 text-rose-300' : priority === 'medium' ? 'bg-amber-500/10 text-amber-300' : 'bg-emerald-500/10 text-emerald-300'; }
+function getGreeting(): string { const hour = new Date().getHours(); return hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'; }
