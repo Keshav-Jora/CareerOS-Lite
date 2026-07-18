@@ -1,4 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
+import { CareerIntelligenceEngine } from '../../ai/intelligence';
 import { PromptBuilder } from './PromptBuilder';
 import { ResponseParser } from './ResponseParser';
 import type { NovaChatRequest } from './types';
@@ -17,6 +18,7 @@ export class GeminiService {
   private readonly maxRetries: number;
   private readonly promptBuilder = new PromptBuilder();
   private readonly responseParser = new ResponseParser();
+  private readonly intelligenceEngine = new CareerIntelligenceEngine();
 
   constructor(options: GeminiServiceOptions = {}) {
     this.model = options.model ?? 'gemini-3.5-flash';
@@ -26,6 +28,7 @@ export class GeminiService {
 
   async *streamChat(request: NovaChatRequest): AsyncGenerator<string, void, undefined> {
     const client = this.createClient();
+    const recommendation = this.intelligenceEngine.generate();
     const input = this.promptBuilder.buildInteractionInput(request.history, request.message, request.context);
     let lastError: GeminiServiceError | undefined;
 
@@ -36,7 +39,7 @@ export class GeminiService {
         const responseStream = await this.withTimeout(client.interactions.create({
           model: this.model,
           input,
-          system_instruction: PromptBuilder.systemInstruction,
+          system_instruction: this.promptBuilder.buildSystemInstruction(recommendation),
           stream: true,
         }));
 

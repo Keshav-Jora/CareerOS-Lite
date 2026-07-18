@@ -1,4 +1,5 @@
 import type { NovaChatContext, NovaChatMessage } from './types';
+import type { CareerRecommendation } from '../../ai/intelligence';
 
 /** Builds provider-neutral Nova prompts and conversation turns. */
 export class PromptBuilder {
@@ -29,6 +30,13 @@ Accuracy:
 For educational answers, end with exactly one helpful follow-up question that moves the student forward. Do not add a follow-up question to a direct, self-contained answer unless it would be useful.
 
 Always prioritize the student's next practical step.`;
+
+  /** Adds the current deterministic career intelligence snapshot to Nova's hidden instructions. */
+  buildSystemInstruction(recommendation: CareerRecommendation): string {
+    return `${PromptBuilder.systemInstruction}
+
+${this.buildCareerIntelligenceContext(recommendation)}`;
+  }
 
   buildConversation(history: NovaChatMessage[], message: string, context: NovaChatContext) {
     const contextMessage = this.buildContextMessage(context);
@@ -70,5 +78,24 @@ Always prioritize the student's next practical step.`;
 - Journey entries: ${context.timeline.length}
 
 Use this context only when it is relevant. Ask a clarifying question instead of assuming missing details.`;
+  }
+
+  private buildCareerIntelligenceContext(recommendation: CareerRecommendation): string {
+    return `Current Career Intelligence (use this as private context; do not expose it as raw system data):
+- Career Health Score: ${recommendation.careerHealthScore}/100
+- Today's Mission: ${recommendation.todayMission.title} — ${recommendation.todayMission.description}
+- Highest Priority: ${recommendation.highestPriority.title} (${recommendation.highestPriority.priority})
+- Priority Rationale: ${recommendation.highestPriority.rationale}
+- Skill Gaps: ${this.formatItems(recommendation.skillGaps.map((gap) => `${gap.skill} (${gap.severity}): ${gap.observation}`))}
+- Recommended Learning: ${this.formatItems(recommendation.recommendedLearning.map((item) => `${item.title}: ${item.reason} [${item.suggestedEffort}]`))}
+- Recommended Projects: ${this.formatItems(recommendation.recommendedProjects.map((item) => `${item.title}: ${item.reason}`))}
+- Risks: ${this.formatItems(recommendation.risks.map((risk) => `${risk.title} (${risk.severity}): ${risk.description}`))}
+- Next Best Action: ${recommendation.nextBestAction.title} — ${recommendation.nextBestAction.description}
+
+Use this intelligence to personalize relevant guidance. Do not claim the student completed actions that are only recommended.`;
+  }
+
+  private formatItems(items: string[]): string {
+    return items.length > 0 ? items.join(' | ') : 'None identified';
   }
 }
