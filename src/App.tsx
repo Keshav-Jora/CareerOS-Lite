@@ -1,9 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import type { User } from 'firebase/auth';
 import { motion, AnimatePresence } from 'motion/react';
 
 // Hooks & Services Architecture
 import { useTheme } from './hooks/useTheme';
 import { useAppData } from './hooks/useAppData';
+import { CloudSyncService } from './services/cloud/CloudSyncService';
+import { SessionManager } from './services/auth/SessionManager';
 
 // Component Imports
 import Sidebar from './components/Sidebar';
@@ -23,6 +26,8 @@ import SettingsView from './components/SettingsView';
 export default function App() {
   // Navigation View State
   const [currentView, setCurrentView] = useState('dashboard');
+  const [sessionUser, setSessionUser] = useState<User | null>(null);
+  const cloudSync = useMemo(() => new CloudSyncService(), []);
 
   // Modular Theme & Data Hooks
   const { theme, toggleTheme } = useTheme();
@@ -54,6 +59,23 @@ export default function App() {
   } = useAppData();
 
   const { totalXP, level, xpForCurrentLevel, xpProgress, streak } = gamification;
+
+  useEffect(() => new SessionManager().observe((user) => {
+    setSessionUser(user);
+    if (user) void cloudSync.sync(user.uid).finally(loadDatabase);
+  }), [cloudSync, loadDatabase]);
+
+  useEffect(() => {
+    const flushQueue = () => { if (sessionUser) void cloudSync.sync(sessionUser.uid); };
+    window.addEventListener('online', flushQueue);
+    return () => window.removeEventListener('online', flushQueue);
+  }, [cloudSync, sessionUser]);
+
+  const refreshAfterAction = () => {
+    loadDatabase();
+    if (sessionUser) void cloudSync.sync(sessionUser.uid);
+    else cloudSync.queueSync();
+  };
 
   // Render active workspace panel
   const renderMainView = () => {
@@ -232,7 +254,7 @@ export default function App() {
         opportunities={opportunities}
         progress={progressData}
         timeline={timelineEntries}
-        onActionExecuted={loadDatabase}
+        onActionExecuted={refreshAfterAction}
       />
     </div>
   );
