@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { dataService } from '../services/dataService';
+import type { CanonicalCareerData } from '../types/career-data';
 import { calculateGamification, GamificationStats } from '../utils/gamification';
 import {
   Opportunity,
@@ -19,6 +20,8 @@ export function useAppData() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [activities, setActivities] = useState<ActivityLog[]>([]);
+  const [canonicalData, setCanonicalData] = useState<CanonicalCareerData | null>(null);
+  const refreshQueued = useRef(false);
 
   // User Profile
   const [userName, setUserName] = useState('Student');
@@ -26,8 +29,12 @@ export function useAppData() {
   const [userGrad, setUserGrad] = useState('Not Set');
 
   const loadDatabase = useCallback(() => {
+    if (refreshQueued.current) return;
+    refreshQueued.current = true;
+    queueMicrotask(() => { refreshQueued.current = false; });
     dataService.initialize();
     const data = dataService.fetchAllData();
+    const canonical = dataService.repository.getSnapshot();
 
     setOpportunities(data.opportunities);
     setTimelineEntries(data.timelineEntries);
@@ -36,6 +43,7 @@ export function useAppData() {
     setNotes(data.notes);
     setNotifications(data.notifications);
     setActivities(data.activities);
+    setCanonicalData(canonical);
     setUserName(data.userName);
     setUserSchool(data.userSchool);
     setUserGrad(data.userGrad);
@@ -65,41 +73,24 @@ export function useAppData() {
 
   // Data Mutators - wrapped in useCallback for stable function references
   const handleSaveOpportunity = useCallback((opp: Opportunity) => {
-    dataService.saveOpportunity(opp);
-    const updated = dataService.fetchAllData();
-    setOpportunities(updated.opportunities);
-    setActivities(updated.activities);
-    setNotifications(updated.notifications);
-  }, []);
+    dataService.saveOpportunity(opp); loadDatabase();
+  }, [loadDatabase]);
 
   const handleDeleteOpportunity = useCallback((id: string) => {
-    dataService.deleteOpportunity(id);
-    const updated = dataService.fetchAllData();
-    setOpportunities(updated.opportunities);
-    setActivities(updated.activities);
-    setNotifications(updated.notifications);
-  }, []);
+    dataService.deleteOpportunity(id); loadDatabase();
+  }, [loadDatabase]);
 
   const handleSaveTimelineEntry = useCallback((entry: TimelineEntry) => {
-    dataService.saveTimelineEntry(entry);
-    const updated = dataService.fetchAllData();
-    setTimelineEntries(updated.timelineEntries);
-    setActivities(updated.activities);
-  }, []);
+    dataService.saveTimelineEntry(entry); loadDatabase();
+  }, [loadDatabase]);
 
   const handleDeleteTimelineEntry = useCallback((id: string) => {
-    dataService.deleteTimelineEntry(id);
-    const updated = dataService.fetchAllData();
-    setTimelineEntries(updated.timelineEntries);
-    setActivities(updated.activities);
-  }, []);
+    dataService.deleteTimelineEntry(id); loadDatabase();
+  }, [loadDatabase]);
 
   const handleUpdateDailyProgress = useCallback((progress: DailyProgress) => {
-    dataService.updateDailyProgress(progress);
-    const updated = dataService.fetchAllData();
-    setProgressData(updated.progressData);
-    setActivities(updated.activities);
-  }, []);
+    dataService.updateDailyProgress(progress); loadDatabase();
+  }, [loadDatabase]);
 
   const handleSaveCertificate = useCallback((cert: Certificate) => {
     dataService.saveCertificate(cert);
@@ -155,6 +146,7 @@ export function useAppData() {
     notes,
     notifications,
     activities,
+    canonicalData,
 
     // Profile State
     userName,
