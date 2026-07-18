@@ -2,10 +2,36 @@ import { dataService } from '../dataService';
 import type { Certificate, DailyProgress, Note, Opportunity } from '../../types';
 import { detectNovaAction } from './ActionRegistry';
 import type { NovaActionIntent, NovaActionResult } from './ActionTypes';
+import type { ActionPlan, ActionOperation } from '../ai/understanding/ActionPlanBuilder';
+import type { CanonicalEntity } from '../data/CanonicalCareerRepository';
+
+export interface ActionPlanExecutionResult {
+  success: boolean;
+  entity: CanonicalEntity | null;
+  operation: ActionOperation;
+  message: string;
+  reason?: 'validation-failed' | 'confirmation-required' | 'unsupported-operation' | 'target-not-found';
+  data?: unknown;
+  issues?: ActionPlan['validation']['issues'];
+}
 
 
 /** Executes only validated local actions through the existing data service. */
 export class ActionRouter {
+  routePlan(plan: ActionPlan): ActionPlanExecutionResult {
+    if (!plan.validation.valid) return { success: false, entity: plan.entity, operation: plan.operation, message: 'Action plan validation failed.', reason: 'validation-failed', issues: plan.validation.issues };
+    if (plan.requiresConfirmation) return { success: false, entity: plan.entity, operation: plan.operation, message: 'Confirmation is required before this action can run.', reason: 'confirmation-required' };
+    if (!plan.entity) return { success: false, entity: null, operation: plan.operation, message: 'No supported entity was detected.', reason: 'unsupported-operation' };
+    const repository = dataService.repository; const entity = plan.entity as CanonicalEntity;
+    if (plan.operation === 'create') { const data = repository.create(entity, plan.payload as never); return this.planSuccess(entity, plan.operation, 'Created successfully.', data); }
+    if (plan.operation === 'update') { const id = this.targetId(plan); if (!id) return this.targetMissing(entity, plan.operation); const data = repository.update(entity, id, plan.payload as never); return data ? this.planSuccess(entity, plan.operation, 'Updated successfully.', data) : this.targetMissing(entity, plan.operation); }
+    if (plan.operation === 'delete') { const id = this.targetId(plan); if (!id) return this.targetMissing(entity, plan.operation); return repository.delete(entity, id) ? this.planSuccess(entity, plan.operation, 'Deleted successfully.') : this.targetMissing(entity, plan.operation); }
+    if (plan.operation === 'archive' || plan.operation === 'restore' || plan.operation === 'complete') { const id = this.targetId(plan); if (!id) return this.targetMissing(entity, plan.operation); const status = plan.operation === 'archive' ? 'archived' : plan.operation === 'restore' ? 'active' : 'completed'; const data = repository.update(entity, id, { status } as never); return data ? this.planSuccess(entity, plan.operation, `${plan.operation} successfully.`, data) : this.targetMissing(entity, plan.operation); }
+    const query = typeof plan.payload.query === 'string' ? plan.payload.query : plan.sourceMessage;
+    const data = plan.intent === 'search' ? repository.search(entity, query) : repository.getAll(entity);
+    return this.planSuccess(entity, plan.operation, 'Results retrieved successfully.', data);
+  }
+
   route(message: string, confirmed = false): NovaActionResult {
     const intent = detectNovaAction(message);
     if (intent.type === 'unknown' || intent.confidence < 0.7) return { status: 'not-handled', message: '', intent };
@@ -86,6 +112,10 @@ export class ActionRouter {
     dataService.updateDailyProgress({ date, dsaQuestions, codingHours: current?.codingHours ?? 0, webDevHours: current?.webDevHours ?? 0, pythonHours: current?.pythonHours ?? 0, applicationsCount: current?.applicationsCount ?? 0, readingMinutes: current?.readingMinutes ?? 0, projectsHours: current?.projectsHours ?? 0 });
     return success(`✓ Today’s DSA progress is now **${dsaQuestions} questions**.`);
   }
+
+  private targetId(plan: ActionPlan): string | undefined { const id = plan.payload.id; return typeof id === 'string' ? id : undefined; }
+  private targetMissing(entity: CanonicalEntity, operation: ActionOperation): ActionPlanExecutionResult { return { success: false, entity, operation, message: 'A valid target id is required.', reason: 'target-not-found' }; }
+  private planSuccess(entity: CanonicalEntity, operation: ActionOperation, message: string, data?: unknown): ActionPlanExecutionResult { return { success: true, entity, operation, message, data }; }
 }
 
 function success(message: string): NovaActionResult { window.dispatchEvent(new Event('career-os-data-changed')); return { status: 'executed', message }; }
