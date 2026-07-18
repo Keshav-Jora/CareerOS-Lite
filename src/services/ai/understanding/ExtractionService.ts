@@ -9,7 +9,7 @@ export class ExtractionService {
   extract(message: string, _intent: ActionIntent | null, entity: ActionEntity | null): ExtractedPayload {
     if (!entity) return {};
     const base = { skills: this.skills(message), links: this.links(message), tags: this.tags(message), checklist: this.checklist(message) };
-    if (entity === 'opportunity') return { ...base, title: this.title(message), organization: this.label(message, ['organization', 'company', 'employer']), category: this.category(message), status: this.status(message), priority: this.label(message, ['priority']) ?? this.value(message, /\bpriority\s+(high|medium|low)/i), stage: this.label(message, ['stage', 'round']), applicationDate: this.dateAfter(message, /\b(?:applied|registered)(?:\s+on)?\s+/i), deadline: this.dateAfter(message, /\bdeadline\s*(?:is|on|:)?\s*/i), location: this.label(message, ['location']), officialLink: this.links(message)[0] };
+    if (entity === 'opportunity') return this.opportunity(message, base);
     if (entity === 'project') return { ...base, title: this.title(message), description: this.value(message, /\bdescription\s*[:\-]?\s*([^\n]+)/i), technologies: this.skills(message), status: this.status(message), repository: this.links(message).find((link) => /github\.com/i.test(link)), demo: this.links(message).find((link) => !/github\.com/i.test(link)) };
     if (entity === 'goal') return { title: this.title(message), targetDate: this.dateAfter(message, /\b(?:by|target date|deadline)\s*(?:is|on|:)?\s*/i), priority: this.value(message, /\bpriority\s*[:\-]?\s*(high|medium|low)/i), notes: this.value(message, /\bnotes?\s*[:\-]?\s*([^\n]+)/i) };
     if (entity === 'skill') return { name: this.value(message, /\b(?:add|learn|skill)\s+([A-Za-z0-9.+#-]+)/i) ?? this.skills(message)[0], level: this.value(message, /\b(beginner|intermediate|advanced)\b/i) };
@@ -17,6 +17,22 @@ export class ExtractionService {
   }
 
   private title(message: string): string | undefined { return this.label(message, ['title']) ?? this.value(message, /\b(?:add|create|update|registered for|track)\s+(?!a new opportunity\b|new opportunity\b|opportunity\b|project\b)([^\n.]+)/i); }
+  private opportunity(message: string, base: ExtractedPayload): ExtractedPayload {
+    const fields = this.sections(message);
+    const skills = this.sectionArray(fields.skills) ?? base.skills;
+    const checklist = this.sectionArray(fields.checklist) ?? base.checklist;
+    const tags = this.sectionArray(fields.tags, true) ?? base.tags;
+    const portal = fields.portal ?? fields['application url'] ?? this.links(message)[0];
+    return { ...base, title: fields.title ?? fields.role ?? this.title(message), organization: fields.company ?? fields.organization ?? fields.employer, category: this.normalizeCategory(fields.category) ?? this.category(message), source: fields.platform, priority: fields.priority ?? this.value(message, /\bpriority\s+(high|medium|low)/i), status: fields.status, deadline: fields.deadline ? this.normalizeDate(fields.deadline) : this.dateAfter(message, /\bdeadline\s*(?:is|on|:)?\s*/i), skills, checklist, tags, eligibility: fields.eligibility, resumeVersion: fields.resume, applicationLink: portal, officialLink: portal, notes: fields['preparation notes'] ?? fields.notes };
+  }
+  private sections(message: string): Record<string, string> {
+    const labels = ['title', 'role', 'company', 'organization', 'category', 'platform', 'priority', 'status', 'deadline', 'skills', 'eligibility', 'checklist', 'resume', 'tags', 'portal', 'application url', 'preparation notes', 'notes'];
+    const expression = new RegExp(`^\\s*(${labels.join('|')})\\s*:\\s*(.*)$`, 'i'); const result: Record<string, string> = {}; let active: string | undefined;
+    for (const line of message.split(/\r?\n/)) { const match = line.match(expression); if (match) { active = match[1].toLowerCase(); result[active] = match[2].trim(); } else if (active && line.trim()) result[active] = `${result[active]}${result[active] ? '\n' : ''}${line.trim()}`; }
+    return result;
+  }
+  private sectionArray(value: string | undefined, hashtag = false): string[] | undefined { if (value === undefined) return undefined; return value.split(/\n|,/).map((item) => item.replace(/^[-*]\s*/, '').replace(/^#/, '').trim()).filter(Boolean).map((item) => hashtag ? item.replace(/^#/, '') : item); }
+  private normalizeCategory(value: string | undefined): string | undefined { return value ? value.replace(/\b\w/g, (letter) => letter.toUpperCase()) : undefined; }
   private label(message: string, labels: string[]): string | undefined { const expression = new RegExp(`(?:^|\\n)\\s*(?:${labels.join('|')})\\s*:\\s*([^\\n]+)`, 'i'); return this.value(message, expression); }
   private value(message: string, expression: RegExp): string | undefined { return message.match(expression)?.[1]?.trim(); }
   private skills(message: string): string[] { const section = this.section(message, 'skills'); const source = section ?? message; const lower = source.toLowerCase(); return [...new Set(knownSkills.filter((skill) => lower.includes(skill.toLowerCase())).concat(section ? this.bullets(section) : []))]; }
