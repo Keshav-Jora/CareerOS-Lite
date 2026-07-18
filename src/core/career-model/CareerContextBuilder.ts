@@ -8,8 +8,6 @@ import type {
   Project,
 } from '../../types/core.types';
 
-const DASHBOARD_TASKS_KEY = 'career_os_dashboard_tasks';
-
 export interface CareerContextSource {
   fetchAllData(): AppDatabasePayload;
   getDashboardTasks(): Task[];
@@ -17,19 +15,12 @@ export interface CareerContextSource {
 
 const defaultSource: CareerContextSource = {
   fetchAllData: () => dataService.fetchAllData(),
-  getDashboardTasks: () => {
-    if (typeof window === 'undefined') {
-      return [];
-    }
-
-    try {
-      const storedTasks = window.localStorage.getItem(DASHBOARD_TASKS_KEY);
-      const parsedTasks: unknown = storedTasks ? JSON.parse(storedTasks) : [];
-      return Array.isArray(parsedTasks) ? parsedTasks as Task[] : [];
-    } catch {
-      return [];
-    }
-  },
+  getDashboardTasks: () => dataService.repository.getSnapshot().goals.map((goal) => ({
+    id: goal.id,
+    text: goal.title,
+    completed: goal.status === 'completed',
+    dueDate: goal.dueDate ?? '',
+  })),
 };
 
 /**
