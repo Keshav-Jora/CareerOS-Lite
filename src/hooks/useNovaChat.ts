@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { GeminiService } from '../services/ai/GeminiService';
 import { ActionRouter } from '../services/actions/ActionRouter';
+import { NovaUnderstandingEngine } from '../services/ai/NovaUnderstandingEngine';
 import type { NovaChatContext, NovaChatMessage } from '../services/ai/types';
 
 export type NovaAssistantState = 'idle' | 'reading' | 'thinking' | 'streaming';
@@ -12,7 +13,7 @@ export function useNovaChat(context: NovaChatContext, onActionExecuted?: () => v
   const isRequestInFlight = useRef(false);
   const service = useRef(new GeminiService());
   const actionRouter = useRef(new ActionRouter());
-  const pendingAction = useRef<string | null>(null);
+  const understandingEngine = useRef(new NovaUnderstandingEngine());
 
   useEffect(() => {
     setMessages([{
@@ -35,24 +36,15 @@ export function useNovaChat(context: NovaChatContext, onActionExecuted?: () => v
     setAssistantState('reading');
 
     try {
-      if (pendingAction.current && /^(cancel|no|never mind)$/i.test(trimmedMessage)) {
-        pendingAction.current = null;
-        setMessages((current) => [...current, { id: `model-action-${Date.now()}`, role: 'model', text: 'Action cancelled. Your data was not changed.', timestamp: new Date() }]);
-        return;
-      }
-      const isConfirmation = /^(confirm|yes|yes please)$/i.test(trimmedMessage);
-      const actionResult = pendingAction.current && isConfirmation
-        ? actionRouter.current.route(pendingAction.current, true)
-        : actionRouter.current.route(trimmedMessage);
-
-      if (actionResult.status !== 'not-handled') {
-        if (actionResult.status === 'confirmation-required') pendingAction.current = trimmedMessage;
-        else if (isConfirmation || actionResult.status === 'executed' || actionResult.status === 'failed') pendingAction.current = null;
-        if (actionResult.status === 'executed') onActionExecuted?.();
+      const plan = understandingEngine.current.understand(trimmedMessage);
+      const isMutation = ['create', 'update', 'delete', 'archive', 'restore', 'complete'].includes(plan.operation);
+      if (isMutation) {
+        const actionResult = actionRouter.current.routePlan(plan);
+        if (actionResult.success) onActionExecuted?.();
         setMessages((current) => [...current, {
           id: `model-action-${Date.now()}`,
           role: 'model',
-          text: actionResult.message,
+          text: actionResult.success ? actionResult.message : actionResult.issues?.map((issue) => `- ${issue.message}`).join('\n') ?? actionResult.message,
           timestamp: new Date(),
         }]);
         return;
