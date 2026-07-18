@@ -11,6 +11,7 @@ import MobileNavigation from './components/MobileNavigation';
 import QuickAddModal from './components/QuickAddModal';
 import AIAssistant from './components/AIAssistant';
 import DashboardView from './components/DashboardView';
+import NovaWorkspace from './components/NovaWorkspace';
 import OpportunitiesView from './components/OpportunitiesView';
 import UpcomingView from './components/UpcomingView';
 import JourneyView from './components/JourneyView';
@@ -75,6 +76,18 @@ export default function App() {
             streak={streak}
             userName={userName}
             userSchool={userSchool}
+          />
+        );
+      case 'nova':
+        return (
+          <NovaWorkspace
+            theme={theme}
+            opportunities={opportunities}
+            progress={progressData}
+            timeline={timelineEntries}
+            certificates={certificates}
+            userName={userName}
+            onNavigateToView={(view) => setCurrentView(view)}
           />
         );
       case 'opportunities':

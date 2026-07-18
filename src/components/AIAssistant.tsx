@@ -9,6 +9,7 @@ interface AIAssistantProps {
   opportunities: Opportunity[];
   progress: DailyProgress[];
   timeline: TimelineEntry[];
+  variant?: 'floating' | 'workspace';
 }
 
 interface Message {
@@ -132,8 +133,9 @@ function parseInlineMarkdown(text: string) {
   return parts.length > 0 ? parts : text;
 }
 
-export default function AIAssistant({ theme, opportunities, progress, timeline }: AIAssistantProps) {
-  const [isOpen, setIsOpen] = useState(false);
+export default function AIAssistant({ theme, opportunities, progress, timeline, variant = 'floating' }: AIAssistantProps) {
+  const isWorkspace = variant === 'workspace';
+  const [isOpen, setIsOpen] = useState(isWorkspace);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [assistantState, setAssistantState] = useState<AssistantState>('idle');
@@ -192,10 +194,11 @@ export default function AIAssistant({ theme, opportunities, progress, timeline }
   }, [opportunities, progress]);
 
   useEffect(() => {
+    if (isWorkspace) return;
     const handleOpen = () => setIsOpen(true);
     window.addEventListener('open-ai-assistant', handleOpen);
     return () => window.removeEventListener('open-ai-assistant', handleOpen);
-  }, []);
+  }, [isWorkspace]);
 
   // Handle Send Message
   const handleSendMessage = async (text: string) => {
@@ -254,6 +257,7 @@ export default function AIAssistant({ theme, opportunities, progress, timeline }
 
   // Close Nova assistant on Escape key
   useEffect(() => {
+    if (isWorkspace) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
         setIsOpen(false);
@@ -261,7 +265,7 @@ export default function AIAssistant({ theme, opportunities, progress, timeline }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen]);
+  }, [isOpen, isWorkspace]);
 
   const quickPrompts = [
     { label: '🎯 Today Priorities', query: 'What should I do today?' },
@@ -273,7 +277,7 @@ export default function AIAssistant({ theme, opportunities, progress, timeline }
   return (
     <>
       {/* Mini Floating Trigger */}
-      {!isOpen && (
+      {!isOpen && !isWorkspace && (
         <motion.button
           type="button"
           id="ai-assistant-trigger"
@@ -309,13 +313,16 @@ export default function AIAssistant({ theme, opportunities, progress, timeline }
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            role="dialog"
-            aria-modal="true"
+            role={isWorkspace ? 'region' : 'dialog'}
+            aria-modal={isWorkspace ? undefined : true}
             aria-labelledby="assistant-title"
             initial={{ opacity: 0, scale: 0.9, y: 40, x: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0, x: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 40, x: 20 }}
-            className={`fixed bottom-20 md:bottom-6 right-2 sm:right-6 left-2 sm:left-auto w-auto sm:w-[410px] max-w-[calc(100vw-1rem)] h-[75vh] sm:h-[520px] max-h-[560px] flex flex-col justify-between rounded-3xl border shadow-2xl overflow-hidden z-50 ${
+            className={`${isWorkspace
+              ? 'h-full min-h-[600px] w-full flex flex-col justify-between overflow-hidden'
+              : 'fixed bottom-20 md:bottom-6 right-2 sm:right-6 left-2 sm:left-auto w-auto sm:w-[410px] max-w-[calc(100vw-1rem)] h-[75vh] sm:h-[520px] max-h-[560px] flex flex-col justify-between rounded-3xl shadow-2xl z-50'
+            } rounded-3xl border ${
               theme === 'dark'
                 ? 'bg-slate-950/95 border-slate-800/80 text-slate-100 shadow-indigo-950/30'
                 : 'bg-white/95 border-slate-200 text-slate-800 shadow-slate-300/50'
@@ -331,7 +338,7 @@ export default function AIAssistant({ theme, opportunities, progress, timeline }
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 id="assistant-title" className="font-display font-bold text-sm tracking-tight text-slate-100">
-                      Nova Assistant <span className="text-[10px] text-indigo-400 font-mono font-semibold">(Beta)</span>
+                      {isWorkspace ? 'Nova planning conversation' : 'Nova Assistant'} <span className="text-[10px] text-indigo-400 font-mono font-semibold">(Beta)</span>
                     </h3>
                   </div>
                   <div className="flex items-center gap-1.5 mt-0.5">
@@ -343,7 +350,7 @@ export default function AIAssistant({ theme, opportunities, progress, timeline }
                   </div>
                 </div>
               </div>
-              <button
+              {!isWorkspace && <button
                 type="button"
                 onClick={() => setIsOpen(false)}
                 aria-label="Close Assistant chat window"
@@ -352,7 +359,7 @@ export default function AIAssistant({ theme, opportunities, progress, timeline }
                 } cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500`}
               >
                 <X className="h-4 w-4" aria-hidden="true" />
-              </button>
+              </button>}
             </div>
 
             {/* Reading Data State Banner */}

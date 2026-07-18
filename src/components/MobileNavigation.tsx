@@ -95,12 +95,8 @@ export default function MobileNavigation({
   };
 
   const handleNavClick = (id: string) => {
-    if (id === 'nova') {
-      window.dispatchEvent(new CustomEvent('open-ai-assistant'));
-    } else {
-      onViewChange(id);
-      setIsDrawerOpen(false);
-    }
+    onViewChange(id);
+    setIsDrawerOpen(false);
   };
 
   return (
@@ -453,4 +449,3 @@ export default function MobileNavigation({
     </div>
   );
 }
-

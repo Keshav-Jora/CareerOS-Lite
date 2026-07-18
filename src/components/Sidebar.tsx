@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   LayoutDashboard,
+  Sparkles,
   Briefcase,
   CalendarClock,
   Milestone,
@@ -15,7 +16,6 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  Sparkles,
   CheckCircle,
   AlertTriangle,
   Info,
@@ -63,6 +63,7 @@ export default function Sidebar({
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'nova', label: 'Nova AI Workspace', icon: Sparkles },
     { id: 'opportunities', label: 'Opportunities', icon: Briefcase },
     { id: 'upcoming', label: 'Upcoming', icon: CalendarClock },
     { id: 'journey', label: 'Journey', icon: Milestone },
