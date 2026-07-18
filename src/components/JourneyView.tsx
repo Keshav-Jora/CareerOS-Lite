@@ -14,8 +14,10 @@ import {
   CheckCircle,
   Sparkles,
   AlertTriangle,
+  TrendingUp,
 } from 'lucide-react';
 import { TimelineEntry } from '../types';
+import { useJourneyMemory } from '../hooks/useJourneyMemory';
 
 interface JourneyViewProps {
   theme: 'light' | 'dark';
@@ -31,6 +33,7 @@ export default function JourneyView({
   onDeleteTimelineEntry,
 }: JourneyViewProps) {
   const [isOpenForm, setIsOpenForm] = useState(false);
+  const journeyMemory = useJourneyMemory(timelineEntries);
 
   // Form states
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -107,10 +110,13 @@ export default function JourneyView({
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="font-display text-2xl font-bold tracking-tight text-white md:text-3xl">
-              Professional Journey
+              Career Journey
             </h1>
             <p className="text-slate-400 text-sm mt-1">
-              Build a chronological audit log of your daily milestones, learnings, and structures.
+              Your living career memory: milestones, lessons, and the story they create.
+            </p>
+            <p className="mt-2 inline-flex items-center gap-1.5 text-[10px] font-mono text-indigo-300">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> {journeyMemory.memoryStatus} · Updated {journeyMemory.lastUpdated}
             </p>
           </div>
           <button
@@ -120,6 +126,8 @@ export default function JourneyView({
             <Plus className="h-3.5 w-3.5" /> Record Today&apos;s Entry
           </button>
         </div>
+
+        <JourneyMemoryLayers memory={journeyMemory} theme={theme} />
 
         {/* Journey Stats Dashboard Bar */}
         {timelineEntries.length > 0 && (
@@ -239,6 +247,7 @@ export default function JourneyView({
 
                   {/* Content grid */}
                   <div className="space-y-3.5 text-xs text-slate-300 relative z-10">
+                    <JourneyMilestoneReflection memory={journeyMemory} entryId={entry.id} />
                     {/* What I Learned */}
                     {entry.learned && (
                       <div className="flex gap-2.5 items-start">
@@ -369,8 +378,8 @@ export default function JourneyView({
                 <Milestone className="h-5 w-5" />
               </div>
               <div>
-                <h1 className="font-display text-xl font-bold text-slate-100">Professional Journey</h1>
-                <p className="text-[11px] text-slate-400">Daily milestones, learnings & progress audit</p>
+                <h1 className="font-display text-xl font-bold text-slate-100">Career Journey</h1>
+                <p className="text-[11px] text-slate-400">Your AI-powered memory of career growth</p>
               </div>
             </div>
           </div>
@@ -383,6 +392,8 @@ export default function JourneyView({
             <Plus className="h-4 w-4" /> Record Today&apos;s Entry
           </button>
         </div>
+
+        <JourneyMemoryLayers memory={journeyMemory} theme={theme} />
 
         {/* Mobile Stats Dashboard Grid */}
         {timelineEntries.length > 0 && (
@@ -496,6 +507,7 @@ export default function JourneyView({
 
                 {/* Mobile Content Sections (Vertically stacked, clear typography, comfortable padding) */}
                 <div className="space-y-3.5">
+                  <JourneyMilestoneReflection memory={journeyMemory} entryId={entry.id} />
                   {/* Learned */}
                   {entry.learned && (
                     <div className="p-3 rounded-xl bg-slate-950/40 border border-slate-800/50 space-y-1">
@@ -1088,5 +1100,110 @@ export default function JourneyView({
         </div>
       )}
     </>
+  );
+}
+
+function JourneyMemoryLayers({
+  memory,
+  theme,
+}: {
+  memory: ReturnType<typeof useJourneyMemory>;
+  theme: 'light' | 'dark';
+}) {
+  const isDark = theme === 'dark';
+  const surface = isDark ? 'border-slate-800 bg-slate-900/50' : 'border-slate-200 bg-white/85';
+  const text = isDark ? 'text-slate-100' : 'text-slate-900';
+  const muted = isDark ? 'text-slate-400' : 'text-slate-600';
+
+  return (
+    <div className="space-y-5">
+      <section className={`rounded-2xl border p-5 sm:p-6 ${surface}`} aria-labelledby="journey-reflections-title">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-indigo-400" aria-hidden="true" />
+          <h2 id="journey-reflections-title" className={`font-display text-lg font-bold ${text}`}>AI reflections</h2>
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          {[
+            ['Biggest achievement', memory.reflections.biggestAchievement],
+            ['Strongest improvement', memory.reflections.strongestImprovement],
+            ['Consistency', memory.reflections.consistency],
+            ['Suggested next focus', memory.reflections.nextFocus],
+          ].map(([label, value]) => (
+            <div key={label} className={`rounded-xl border p-3.5 ${isDark ? 'border-slate-800 bg-slate-950/35' : 'border-slate-200 bg-slate-50'}`}>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-400">{label}</p>
+              <p className={`mt-2 text-xs leading-5 ${muted}`}>{value}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section aria-labelledby="career-growth-title">
+        <div className="mb-3 flex items-center gap-2 px-1">
+          <TrendingUp className="h-4 w-4 text-indigo-400" aria-hidden="true" />
+          <h2 id="career-growth-title" className={`font-display text-lg font-bold ${text}`}>Career growth</h2>
+        </div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+          {[
+            ['Projects', memory.growth.projects],
+            ['Skills', memory.growth.skills],
+            ['Applications', memory.growth.applications],
+            ['Certifications', memory.growth.certifications],
+            ['Coding progress', memory.growth.codingProgress],
+          ].map(([label, value]) => (
+            <div key={label} className={`rounded-xl border p-3.5 ${surface}`}>
+              <p className={`font-display text-xl font-bold ${text}`}>{value}</p>
+              <p className={`mt-1 text-[10px] ${muted}`}>{label}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className={`rounded-2xl border p-5 sm:p-6 ${surface}`} aria-labelledby="decision-insights-title">
+        <div className="flex items-center gap-2">
+          <Trophy className="h-4 w-4 text-amber-400" aria-hidden="true" />
+          <h2 id="decision-insights-title" className={`font-display text-lg font-bold ${text}`}>Decision insights</h2>
+        </div>
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          {[
+            ['Highest impact decision', memory.insights.highestImpactDecision],
+            ['Best project', memory.insights.bestProject],
+            ['Most valuable learning', memory.insights.mostValuableLearning],
+            ['Recommended next milestone', memory.insights.nextMilestone],
+          ].map(([label, value]) => (
+            <div key={label} className="border-l-2 border-indigo-400/50 pl-3">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-400">{label}</p>
+              <p className={`mt-1.5 text-xs leading-5 ${muted}`}>{value}</p>
+            </div>
+          ))}
+        </div>
+        <details className={`mt-5 rounded-xl border px-4 py-3 text-xs ${isDark ? 'border-slate-800 bg-slate-950/35 text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-600'}`}>
+          <summary className="cursor-pointer font-semibold text-indigo-300">Why this next milestone</summary>
+          <p className="mt-3 whitespace-pre-line leading-5">{memory.nextExplanation}</p>
+        </details>
+      </section>
+    </div>
+  );
+}
+
+function JourneyMilestoneReflection({
+  memory,
+  entryId,
+}: {
+  memory: ReturnType<typeof useJourneyMemory>;
+  entryId: string;
+}) {
+  const milestone = memory.milestones.find((item) => item.id === entryId);
+  if (!milestone) return null;
+
+  return (
+    <div className="rounded-xl border border-indigo-500/15 bg-indigo-500/5 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-indigo-400">AI memory reflection</span>
+        <span className="text-[10px] font-mono text-slate-500">{milestone.date}</span>
+      </div>
+      <p className="mt-2 text-xs font-semibold text-slate-200">{milestone.title}</p>
+      <p className="mt-1 text-xs leading-5 text-slate-400"><span className="font-medium text-indigo-300">Impact:</span> {milestone.impact}</p>
+      <p className="mt-1 text-xs leading-5 text-slate-400"><span className="font-medium text-indigo-300">Reflection:</span> {milestone.reflection}</p>
+    </div>
   );
 }
