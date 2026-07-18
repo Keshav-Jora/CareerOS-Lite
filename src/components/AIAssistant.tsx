@@ -10,6 +10,7 @@ interface AIAssistantProps {
   progress: DailyProgress[];
   timeline: TimelineEntry[];
   variant?: 'floating' | 'workspace';
+  onActionExecuted?: () => void;
 }
 
 /**
@@ -123,7 +124,7 @@ function parseInlineMarkdown(text: string) {
   return parts.length > 0 ? parts : text;
 }
 
-export default function AIAssistant({ theme, opportunities, progress, timeline, variant = 'floating' }: AIAssistantProps) {
+export default function AIAssistant({ theme, opportunities, progress, timeline, variant = 'floating', onActionExecuted }: AIAssistantProps) {
   const isWorkspace = variant === 'workspace';
   const [isOpen, setIsOpen] = useState(isWorkspace);
   const userName = localStorage.getItem('career_os_user_name') || 'Student';
@@ -132,7 +133,7 @@ export default function AIAssistant({ theme, opportunities, progress, timeline, 
     progress,
     timeline,
     userName,
-  });
+  }, onActionExecuted);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto scroll to bottom

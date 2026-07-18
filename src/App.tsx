@@ -232,6 +232,7 @@ export default function App() {
         opportunities={opportunities}
         progress={progressData}
         timeline={timelineEntries}
+        onActionExecuted={loadDatabase}
       />
     </div>
   );

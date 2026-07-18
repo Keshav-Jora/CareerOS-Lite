@@ -1,15 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { GeminiService } from '../services/ai/GeminiService';
+import { ActionRouter } from '../services/actions/ActionRouter';
 import type { NovaChatContext, NovaChatMessage } from '../services/ai/types';
 
 export type NovaAssistantState = 'idle' | 'reading' | 'thinking' | 'streaming';
 
-export function useNovaChat(context: NovaChatContext) {
+export function useNovaChat(context: NovaChatContext, onActionExecuted?: () => void) {
   const [messages, setMessages] = useState<NovaChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [assistantState, setAssistantState] = useState<NovaAssistantState>('idle');
   const isRequestInFlight = useRef(false);
   const service = useRef(new GeminiService());
+  const actionRouter = useRef(new ActionRouter());
+  const pendingAction = useRef<string | null>(null);
 
   useEffect(() => {
     setMessages([{
@@ -32,6 +35,29 @@ export function useNovaChat(context: NovaChatContext) {
     setAssistantState('reading');
 
     try {
+      if (pendingAction.current && /^(cancel|no|never mind)$/i.test(trimmedMessage)) {
+        pendingAction.current = null;
+        setMessages((current) => [...current, { id: `model-action-${Date.now()}`, role: 'model', text: 'Action cancelled. Your data was not changed.', timestamp: new Date() }]);
+        return;
+      }
+      const isConfirmation = /^(confirm|yes|yes please)$/i.test(trimmedMessage);
+      const actionResult = pendingAction.current && isConfirmation
+        ? actionRouter.current.route(pendingAction.current, true)
+        : actionRouter.current.route(trimmedMessage);
+
+      if (actionResult.status !== 'not-handled') {
+        if (actionResult.status === 'confirmation-required') pendingAction.current = trimmedMessage;
+        else if (isConfirmation || actionResult.status === 'executed' || actionResult.status === 'failed') pendingAction.current = null;
+        if (actionResult.status === 'executed') onActionExecuted?.();
+        setMessages((current) => [...current, {
+          id: `model-action-${Date.now()}`,
+          role: 'model',
+          text: actionResult.message,
+          timestamp: new Date(),
+        }]);
+        return;
+      }
+
       setAssistantState('thinking');
       const responseId = `model-${Date.now()}`;
       setMessages((current) => [...current, { id: responseId, role: 'model', text: '', timestamp: new Date(), isStreaming: true }]);
@@ -51,7 +77,7 @@ export function useNovaChat(context: NovaChatContext) {
       isRequestInFlight.current = false;
       setAssistantState('idle');
     }
-  }, [context, messages]);
+  }, [context, messages, onActionExecuted]);
 
   return { messages, inputText, setInputText, assistantState, sendMessage };
 }
