@@ -1,10 +1,8 @@
 import { dataService } from '../dataService';
-import type { Certificate, DailyProgress, Note, Opportunity, Task } from '../../types';
+import type { Certificate, DailyProgress, Note, Opportunity } from '../../types';
 import { detectNovaAction } from './ActionRegistry';
 import type { NovaActionIntent, NovaActionResult } from './ActionTypes';
 
-const TASKS_KEY = 'career_os_dashboard_tasks';
-const FOCUS_KEY = 'career_os_today_focus';
 
 /** Executes only validated local actions through the existing data service. */
 export class ActionRouter {
@@ -31,9 +29,9 @@ export class ActionRouter {
         case 'create_goal': return this.saveGoal(intent.entity, false);
         case 'complete_goal': return this.saveGoal(intent.entity, true);
         case 'update_dsa_progress': return this.updateDsa(data.progressData, intent);
-        case 'set_mission_focus': localStorage.setItem(FOCUS_KEY, intent.entity); return success(`✓ Today’s focus is now **${intent.entity}**.`);
-        case 'complete_mission': localStorage.setItem(`${FOCUS_KEY}:status`, 'completed'); return success('✓ Today’s mission was marked complete. Great work building momentum.');
-        case 'skip_mission': localStorage.setItem(`${FOCUS_KEY}:status`, 'skipped'); return success('Today’s mission was skipped. Nova will use your latest data for the next recommendation.');
+        case 'set_mission_focus': return this.saveMission(intent.entity, 'open');
+        case 'complete_mission': return this.saveMission('Today’s mission', 'completed');
+        case 'skip_mission': return this.saveMission('Today’s mission', 'skipped');
         default: return { status: 'failed', message: 'That action is recognized but needs more detail before I can safely apply it.', intent };
       }
     } catch { return { status: 'failed', message: 'I could not complete that action. Your existing data was left unchanged.', intent }; }
@@ -62,13 +60,23 @@ export class ActionRouter {
   }
 
   private saveGoal(name: string, complete: boolean): NovaActionResult {
-    const tasks = JSON.parse(localStorage.getItem(TASKS_KEY) ?? '[]') as Task[];
-    const existing = tasks.find((task) => task.text.toLowerCase() === name.toLowerCase());
+    const goals = dataService.repository.getSnapshot().goals;
+    const existing = goals.find((goal) => goal.title.toLowerCase() === name.toLowerCase());
     if (complete && !existing) return { status: 'failed', message: `I could not find a goal named **${name}**.`, };
-    if (existing) existing.completed = complete;
-    else tasks.push({ id: `goal-nova-${Date.now()}`, text: name, completed: false, dueDate: '' });
-    localStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
+    const updatedAt = new Date().toISOString();
+    const next = existing
+      ? goals.map((goal) => goal.id === existing.id ? { ...goal, status: complete ? 'completed' as const : goal.status, updatedAt } : goal)
+      : [...goals, { id: `goal-nova-${Date.now()}`, title: name, status: 'active' as const, priority: 'medium' as const, updatedAt }];
+    dataService.repository.saveGoals(next);
+    if (!dataService.repository.getSnapshot().goals.some((goal) => goal.title === name && (complete ? goal.status === 'completed' : true))) return failure(`CareerOS could not verify goal **${name}**.`, );
     return success(`✓ Goal **${name}** was ${complete ? 'completed' : 'created'}.`);
+  }
+
+  private saveMission(title: string, status: 'open' | 'completed' | 'skipped'): NovaActionResult {
+    const snapshot = dataService.repository.getSnapshot(); const date = new Date().toISOString().slice(0, 10); const current = snapshot.missions.find((mission) => mission.date === date);
+    const missions = current ? snapshot.missions.map((mission) => mission.id === current.id ? { ...mission, title, status, updatedAt: new Date().toISOString() } : mission) : [...snapshot.missions, { id: `mission-nova-${Date.now()}`, title, status, date, updatedAt: new Date().toISOString() }];
+    dataService.repository.saveMissions(missions);
+    return dataService.repository.getSnapshot().missions.some((mission) => mission.date === date && mission.status === status) ? success(status === 'open' ? `✓ Today’s focus is now **${title}**.` : status === 'completed' ? '✓ Today’s mission was marked complete. Great work building momentum.' : 'Today’s mission was skipped. Nova will use your latest data for the next recommendation.') : failure('CareerOS could not verify today’s mission.');
   }
 
   private updateDsa(progress: DailyProgress[], intent: NovaActionIntent): NovaActionResult {
