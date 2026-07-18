@@ -18,7 +18,9 @@ export class ActionRouter {
       switch (intent.type) {
         case 'add_opportunity': {
           const opportunity: Opportunity = { id: `opp-nova-${Date.now()}`, title: intent.entity, organization: 'Not set', category: 'Internship', source: 'Nova', applicationLink: '', applyDate: new Date().toISOString().slice(0, 10), deadline: '', status: 'Saved', priority: 'Medium', notes: 'Added by Nova.' };
-          dataService.saveOpportunity(opportunity); return success(`✓ **${intent.entity}** was added to your opportunity pipeline.`);
+          dataService.saveOpportunity(opportunity);
+          if (!dataService.fetchAllData().opportunities.some((item) => item.id === opportunity.id)) return failure('CareerOS could not verify the new opportunity was saved.', intent);
+          return success(`✓ **${intent.entity}** was added to your opportunity pipeline.`);
         }
         case 'delete_opportunity': return this.changeOpportunity(data.opportunities, intent, (item) => dataService.deleteOpportunity(item.id), 'deleted');
         case 'archive_opportunity': return this.changeOpportunity(data.opportunities, intent, (item) => dataService.saveOpportunity({ ...item, status: 'Completed' }), 'archived');
@@ -41,7 +43,10 @@ export class ActionRouter {
     const query = intent.entity.toLowerCase().replace(/^this item$/, '');
     const match = opportunities.find((item) => !query || `${item.title} ${item.organization}`.toLowerCase().includes(query));
     if (!match) return { status: 'failed', message: 'I could not find that opportunity. Please include its name.', intent };
-    apply(match); return success(`✓ **${match.title}** was ${verb}.`);
+    apply(match);
+    const persisted = dataService.fetchAllData().opportunities;
+    const verified = verb === 'deleted' ? !persisted.some((item) => item.id === match.id) : persisted.some((item) => item.id === match.id && item.status === 'Completed');
+    return verified ? success(`✓ **${match.title}** was ${verb}.`) : failure(`CareerOS could not verify that **${match.title}** was ${verb}.`, intent);
   }
 
   private saveSkill(notes: Note[], name: string, learning: boolean): NovaActionResult {
@@ -76,4 +81,5 @@ export class ActionRouter {
 }
 
 function success(message: string): NovaActionResult { return { status: 'executed', message }; }
+function failure(message: string, intent?: NovaActionIntent): NovaActionResult { return { status: 'failed', message, intent }; }
 function describe(intent: NovaActionIntent): string { return `${intent.type.replaceAll('_', ' ')} ${intent.entity}`; }

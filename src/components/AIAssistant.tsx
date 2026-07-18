@@ -295,7 +295,7 @@ export default function AIAssistant({ theme, opportunities, progress, timeline, 
           }}
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
-          className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 text-white border border-indigo-400 shadow-2xl cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+          className="fixed bottom-[calc(6rem+env(safe-area-inset-bottom))] md:bottom-8 right-4 md:right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 text-white border border-indigo-400 shadow-2xl cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
         >
           <div className="absolute inset-0 rounded-full bg-indigo-500/20 animate-ping pointer-events-none" />
           <Bot className="h-6 w-6 text-white" aria-hidden="true" />
@@ -314,7 +314,7 @@ export default function AIAssistant({ theme, opportunities, progress, timeline, 
             exit={{ opacity: 0, scale: 0.9, y: 40, x: 20 }}
             className={`${isWorkspace
               ? 'h-full min-h-[600px] w-full flex flex-col justify-between overflow-hidden'
-              : 'fixed bottom-20 md:bottom-6 right-2 sm:right-6 left-2 sm:left-auto w-auto sm:w-[410px] max-w-[calc(100vw-1rem)] h-[75vh] sm:h-[520px] max-h-[560px] flex flex-col justify-between rounded-3xl shadow-2xl z-50'
+              : 'fixed bottom-[calc(6rem+env(safe-area-inset-bottom))] md:bottom-8 right-2 sm:right-6 left-2 sm:left-auto w-auto sm:w-[410px] max-w-[calc(100vw-1rem)] h-[75vh] sm:h-[520px] max-h-[560px] flex flex-col justify-between rounded-3xl shadow-2xl z-50'
             } rounded-3xl border ${
               theme === 'dark'
                 ? 'bg-slate-950/95 border-slate-800/80 text-slate-100 shadow-indigo-950/30'
