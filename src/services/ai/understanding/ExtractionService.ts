@@ -13,12 +13,14 @@ export class ExtractionService {
     if (entity === 'project') return { ...base, title: this.title(message), description: this.value(message, /\bdescription\s*[:\-]?\s*([^\n]+)/i), technologies: this.skills(message), status: this.status(message), repository: this.links(message).find((link) => /github\.com/i.test(link)), demo: this.links(message).find((link) => !/github\.com/i.test(link)) };
     if (entity === 'goal') return { title: this.title(message), targetDate: this.dateAfter(message, /\b(?:by|target date|deadline)\s*(?:is|on|:)?\s*/i), priority: this.value(message, /\bpriority\s*[:\-]?\s*(high|medium|low)/i), notes: this.value(message, /\bnotes?\s*[:\-]?\s*([^\n]+)/i) };
     if (entity === 'skill') return { name: this.value(message, /\b(?:add|learn|skill)\s+([A-Za-z0-9.+#-]+)/i) ?? this.skills(message)[0], level: this.value(message, /\b(beginner|intermediate|advanced)\b/i) };
-    if (entity === 'mission') return { ...base, title: this.missionTitle(message) };
+    if (entity === 'mission') return this.mission(message, base);
     return { ...base, title: this.title(message) };
   }
 
   private title(message: string): string | undefined { return this.label(message, ['title']) ?? this.value(message, /\b(?:add|create|update|registered for|track)\s+(?!a new opportunity\b|new opportunity\b|opportunity\b|project\b)([^\n.]+)/i); }
-  private missionTitle(message: string): string | undefined { return this.value(message, /^\s*today'?s mission[ \t]*:[ \t]*([^\n]+)/im) ?? this.bullets(message)[0]; }
+  private mission(message: string, base: ExtractedPayload): ExtractedPayload {
+    return { ...base, title: "Today's Mission", tasks: this.bullets(this.section(message, 'tasks') ?? message), duration: this.value(message, /\b(?:duration|estimated time)\s*:\s*([^\n]+)/i), priority: this.value(message, /\bpriority\s*:\s*(high|medium|low)/i) };
+  }
   private opportunity(message: string, base: ExtractedPayload): ExtractedPayload {
     const fields = this.sections(message);
     const skills = this.sectionArray(fields.skills) ?? base.skills;

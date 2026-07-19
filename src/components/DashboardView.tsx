@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import {
   ArrowRight,
@@ -20,7 +20,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import type { ActivityLog, Certificate, DailyProgress, Note, Opportunity, TimelineEntry } from '../types';
-import type { CareerMission } from '../types/career-data';
+import type { CareerMission, MissionTask } from '../types/career-data';
 import { useDashboardIntelligence } from '../hooks/useDashboardIntelligence';
 
 interface DashboardViewProps {
@@ -41,6 +41,8 @@ interface DashboardViewProps {
   userName?: string;
   userSchool?: string;
   dailyMission?: CareerMission;
+  onSaveMission: (mission: CareerMission) => void;
+  onDeleteMission: (id: string) => void;
 }
 
 const quickActions = [
@@ -62,6 +64,8 @@ export default function DashboardView({
   onNavigateToView,
   userName = 'Student',
   dailyMission,
+  onSaveMission,
+  onDeleteMission,
 }: DashboardViewProps) {
   const [missionComplete, setMissionComplete] = useState(false);
   const intelligence = useDashboardIntelligence({
@@ -78,9 +82,6 @@ export default function DashboardView({
   const surface = isDark ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-white/90 shadow-sm';
   const mutedText = isDark ? 'text-slate-400' : 'text-slate-600';
   const headingText = isDark ? 'text-white' : 'text-slate-950';
-  const missionTitle = dailyMission?.title ?? recommendation.todayMission.title;
-  const missionDescription = dailyMission ? 'Created by Nova for today.' : recommendation.todayMission.description;
-  const missionStatus = dailyMission?.status === 'completed' ? 'Complete' : dailyMission?.status === 'skipped' ? 'Skipped' : missionComplete ? 'Complete' : 'Open';
   const trendLabel = intelligence.weeklyTrend === 0
     ? 'Stable this week'
     : `${intelligence.weeklyTrend > 0 ? '↑' : '↓'} ${Math.abs(intelligence.weeklyTrend)}h this week`;
@@ -165,11 +166,7 @@ export default function DashboardView({
       </section>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <section className={`rounded-3xl border p-6 ${surface}`} aria-labelledby="mission-title">
-          <div className="flex items-center justify-between gap-4"><div><div className="flex items-center gap-2 text-sm font-semibold text-amber-400"><Target className="h-4 w-4" aria-hidden="true" /> Today’s mission</div><h2 id="mission-title" className={`mt-2 font-display text-xl font-bold ${headingText}`}>{missionTitle}</h2></div><span className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide ${priorityClass(recommendation.todayMission.priority)}`}>{recommendation.todayMission.priority}</span></div>
-          <p className={`mt-3 text-sm leading-6 ${mutedText}`}>{missionDescription}</p>
-          <div className={`mt-5 grid grid-cols-3 divide-x rounded-xl border ${isDark ? 'divide-slate-800 border-slate-800 bg-slate-950/35' : 'divide-slate-200 border-slate-200 bg-slate-50'}`}><MissionMetric label="Duration" value={intelligence.estimatedDuration} /><MissionMetric label="Impact" value={intelligence.expectedImpact} /><MissionMetric label="Status" value={missionStatus} /></div>
-        </section>
+        <DailyMissionCard theme={theme} mission={dailyMission} fallbackTitle={recommendation.todayMission.title} fallbackDescription={recommendation.todayMission.description} fallbackPriority={recommendation.todayMission.priority} fallbackDuration={intelligence.estimatedDuration} onSave={onSaveMission} onDelete={onDeleteMission} />
 
         <section className={`rounded-3xl border p-6 ${surface}`} aria-labelledby="highest-priority-title">
           <div className="flex items-center gap-2 text-sm font-semibold text-rose-400"><Flame className="h-4 w-4" aria-hidden="true" /> Highest priority</div>
@@ -203,6 +200,54 @@ export default function DashboardView({
       <div className={`flex items-center gap-2 px-1 text-xs ${isDark ? 'text-slate-600' : 'text-slate-500'}`}><CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" aria-hidden="true" /> This Command Center refreshes whenever your CareerOS data changes.</div>
     </div>
   );
+}
+
+function DailyMissionCard({ theme, mission, fallbackTitle, fallbackDescription, fallbackPriority, fallbackDuration, onSave, onDelete }: { theme: 'light' | 'dark'; mission?: CareerMission; fallbackTitle: string; fallbackDescription: string; fallbackPriority: string; fallbackDuration: string; onSave: (mission: CareerMission) => void; onDelete: (id: string) => void }) {
+  const isDark = theme === 'dark';
+  const [isEditing, setIsEditing] = useState(false);
+  const [title, setTitle] = useState(mission?.title ?? 'Today’s Mission');
+  const [duration, setDuration] = useState(mission?.duration ?? '45 min');
+  const [priority, setPriority] = useState<NonNullable<CareerMission['priority']>>(mission?.priority ?? 'High');
+  const [tasks, setTasks] = useState<MissionTask[]>(mission?.tasks ?? []);
+  const [newTask, setNewTask] = useState('');
+
+  useEffect(() => {
+    setTitle(mission?.title ?? 'Today’s Mission');
+    setDuration(mission?.duration ?? '45 min');
+    setPriority(mission?.priority ?? 'High');
+    setTasks(mission?.tasks ?? []);
+    setIsEditing(false);
+  }, [mission]);
+
+  if (!mission) {
+    return <section className={`rounded-3xl border p-6 ${isDark ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-white/90 shadow-sm'}`} aria-labelledby="mission-title"><div className="flex items-center justify-between gap-4"><div><div className="flex items-center gap-2 text-sm font-semibold text-amber-400"><Target className="h-4 w-4" aria-hidden="true" /> Today’s mission</div><h2 id="mission-title" className={`mt-2 font-display text-xl font-bold ${isDark ? 'text-white' : 'text-slate-950'}`}>{fallbackTitle}</h2></div><span className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide ${priorityClass(fallbackPriority)}`}>{fallbackPriority}</span></div><p className={`mt-3 text-sm leading-6 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{fallbackDescription}</p><div className={`mt-5 grid grid-cols-3 divide-x rounded-xl border ${isDark ? 'divide-slate-800 border-slate-800 bg-slate-950/35' : 'divide-slate-200 border-slate-200 bg-slate-50'}`}><MissionMetric label="Duration" value={fallbackDuration} /><MissionMetric label="Priority" value={fallbackPriority} /><MissionMetric label="Status" value="Open" /></div></section>;
+  }
+
+  const completed = tasks.filter((task) => task.completed).length;
+  const save = (nextTasks = tasks) => {
+    onSave({ ...mission, title: title.trim() || 'Today’s Mission', duration: duration.trim() || '45 min', priority, tasks: nextTasks, updatedAt: new Date().toISOString() });
+    setIsEditing(false);
+  };
+  const toggleTask = (id: string) => {
+    const nextTasks = tasks.map((task) => task.id === id ? { ...task, completed: !task.completed } : task);
+    setTasks(nextTasks);
+    onSave({ ...mission, tasks: nextTasks, updatedAt: new Date().toISOString() });
+  };
+  const addTask = () => {
+    const label = newTask.trim();
+    if (!label) return;
+    setTasks((current) => [...current, { id: `mission-task-${Date.now()}`, label, completed: false }]);
+    setNewTask('');
+  };
+
+  return <section className={`rounded-3xl border p-6 ${isDark ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-white/90 shadow-sm'}`} aria-labelledby="mission-title">
+    <div className="flex items-start justify-between gap-4"><div className="min-w-0"><div className="flex items-center gap-2 text-sm font-semibold text-amber-400"><Target className="h-4 w-4" aria-hidden="true" /> Today’s mission</div>{isEditing ? <input aria-label="Mission title" value={title} onChange={(event) => setTitle(event.target.value)} className={`mt-2 w-full rounded-lg border px-3 py-2 text-xl font-bold ${isDark ? 'border-slate-700 bg-slate-950 text-white' : 'border-slate-300 bg-white text-slate-950'}`} /> : <h2 id="mission-title" className={`mt-2 font-display text-xl font-bold ${isDark ? 'text-white' : 'text-slate-950'}`}>{mission.title}</h2>}</div><span className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide ${priorityClass(mission.priority ?? 'High')}`}>{mission.priority ?? 'High'}</span></div>
+    <p className={`mt-3 text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{tasks.length} Tasks · {completed}/{tasks.length} Complete</p>
+    <div className="mt-4 space-y-2">{tasks.map((task) => <div key={task.id} className={`flex items-center gap-3 rounded-xl border px-3 py-2 ${isDark ? 'border-slate-800 bg-slate-950/35' : 'border-slate-200 bg-slate-50'}`}><button type="button" aria-label={`Toggle ${task.label}`} onClick={() => toggleTask(task.id)} className={`grid h-5 w-5 place-items-center rounded border ${task.completed ? 'border-emerald-400 bg-emerald-400 text-slate-950' : 'border-slate-600'}`}>{task.completed && <Check className="h-3.5 w-3.5" />}</button><span className={`min-w-0 flex-1 text-sm ${task.completed ? 'text-slate-500 line-through' : isDark ? 'text-slate-200' : 'text-slate-800'}`}>{task.label}</span>{isEditing && <button type="button" aria-label={`Remove ${task.label}`} onClick={() => setTasks((current) => current.filter((item) => item.id !== task.id))} className="text-xs font-semibold text-rose-400">Remove</button>}</div>)}</div>
+    {isEditing && <div className="mt-4 space-y-3"><div className="flex gap-2"><input aria-label="New mission task" value={newTask} onChange={(event) => setNewTask(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); addTask(); } }} placeholder="Add task" className={`min-w-0 flex-1 rounded-lg border px-3 py-2 text-sm ${isDark ? 'border-slate-700 bg-slate-950 text-white' : 'border-slate-300 bg-white'}`} /><button type="button" onClick={addTask} className="rounded-lg bg-indigo-500 px-3 py-2 text-sm font-semibold text-white">Add</button></div><div className="grid gap-2 sm:grid-cols-2"><input aria-label="Mission duration" value={duration} onChange={(event) => setDuration(event.target.value)} placeholder="Duration" className={`rounded-lg border px-3 py-2 text-sm ${isDark ? 'border-slate-700 bg-slate-950 text-white' : 'border-slate-300 bg-white'}`} /><select aria-label="Mission priority" value={priority} onChange={(event) => setPriority(event.target.value as NonNullable<CareerMission['priority']>)} className={`rounded-lg border px-3 py-2 text-sm ${isDark ? 'border-slate-700 bg-slate-950 text-white' : 'border-slate-300 bg-white'}`}><option>High</option><option>Medium</option><option>Low</option></select></div></div>}
+    <div className="mt-5 grid grid-cols-3 divide-x rounded-xl border border-slate-800 bg-slate-950/35"><MissionMetric label="Duration" value={mission.duration ?? '45 min'} /><MissionMetric label="Priority" value={mission.priority ?? 'High'} /><MissionMetric label="Progress" value={`${completed}/${tasks.length}`} /></div>
+    <div className="mt-4 flex gap-2">{isEditing ? <><button type="button" onClick={() => save()} className="rounded-lg bg-indigo-500 px-3 py-2 text-sm font-semibold text-white">Save mission</button><button type="button" onClick={() => setIsEditing(false)} className="rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold">Cancel</button></> : <><button type="button" onClick={() => setIsEditing(true)} className="rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold">Edit</button><button type="button" onClick={() => onDelete(mission.id)} className="rounded-lg border border-rose-500/40 px-3 py-2 text-sm font-semibold text-rose-400">Delete</button></>}</div>
+  </section>;
 }
 
 function MetricPill({ label, value, isDark }: { label: string; value: string; isDark: boolean }) { return <span className={`rounded-xl border px-3 py-2 text-xs ${isDark ? 'border-slate-700 bg-slate-950/30 text-slate-300' : 'border-slate-200 bg-white text-slate-700'}`}><span className={`mr-1.5 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>{label}</span><span className="font-semibold">{value}</span></span>; }

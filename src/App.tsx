@@ -53,6 +53,8 @@ export default function App() {
     handleSaveTimelineEntry,
     handleDeleteTimelineEntry,
     handleUpdateDailyProgress,
+    handleSaveMission,
+    handleDeleteMission,
     handleSaveCertificate,
     handleDeleteCertificate,
     handleSaveNote,
@@ -107,6 +109,8 @@ export default function App() {
             userName={userName}
             userSchool={userSchool}
             dailyMission={canonicalData?.missions.find((mission) => mission.date === new Date().toISOString().slice(0, 10))}
+            onSaveMission={handleSaveMission}
+            onDeleteMission={handleDeleteMission}
           />
         );
       case 'nova':

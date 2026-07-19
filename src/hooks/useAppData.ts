@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { dataService } from '../services/dataService';
-import type { CanonicalCareerData } from '../types/career-data';
+import type { CanonicalCareerData, CareerMission } from '../types/career-data';
 import { calculateGamification, GamificationStats } from '../utils/gamification';
 import {
   Opportunity,
@@ -92,6 +92,18 @@ export function useAppData() {
     dataService.updateDailyProgress(progress); loadDatabase();
   }, [loadDatabase]);
 
+  const handleSaveMission = useCallback((mission: CareerMission) => {
+    const existing = dataService.repository.get('mission', mission.id);
+    if (existing) dataService.repository.update('mission', mission.id, mission);
+    else dataService.repository.create('mission', mission);
+    loadDatabase();
+  }, [loadDatabase]);
+
+  const handleDeleteMission = useCallback((id: string) => {
+    dataService.repository.delete('mission', id);
+    loadDatabase();
+  }, [loadDatabase]);
+
   const handleSaveCertificate = useCallback((cert: Certificate) => {
     dataService.saveCertificate(cert);
     const updated = dataService.fetchAllData();
@@ -163,6 +175,8 @@ export function useAppData() {
     handleSaveTimelineEntry,
     handleDeleteTimelineEntry,
     handleUpdateDailyProgress,
+    handleSaveMission,
+    handleDeleteMission,
     handleSaveCertificate,
     handleDeleteCertificate,
     handleSaveNote,
