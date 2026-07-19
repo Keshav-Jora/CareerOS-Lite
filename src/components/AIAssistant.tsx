@@ -474,14 +474,20 @@ export default function AIAssistant({ theme, opportunities, progress, timeline, 
                 <label htmlFor="ai-chat-input" className="sr-only">
                   Ask Nova Assistant a question
                 </label>
-                <input
+                <textarea
                   id="ai-chat-input"
-                  type="text"
                   placeholder="Ask Nova about your goals, tasks, or metrics..."
                   value={inputText}
                   disabled={assistantState !== 'idle'}
                   onChange={(e) => setInputText(e.target.value)}
-                  className={`flex-1 px-3.5 py-2 rounded-xl border text-xs focus:ring-1 focus:ring-indigo-500 focus:outline-none transition-all ${
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' && !event.shiftKey) {
+                      event.preventDefault();
+                      if (inputText.trim() && assistantState === 'idle') sendMessage(inputText);
+                    }
+                  }}
+                  rows={1}
+                  className={`flex-1 min-h-9 max-h-32 resize-y px-3.5 py-2 rounded-xl border text-xs focus:ring-1 focus:ring-indigo-500 focus:outline-none transition-all ${
                     theme === 'dark'
                       ? 'bg-slate-950/70 border-slate-800/90 text-slate-100 placeholder:text-slate-500'
                       : 'bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400'
