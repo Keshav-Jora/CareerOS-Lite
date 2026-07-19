@@ -8,7 +8,7 @@ export class RepositoryResponseService {
     const snapshot = dataService.repository.getSnapshot();
 
     if (/^(hi|hello|hey|thanks|thank you|bye|good morning|good evening)[!. ]*$/i.test(value)) return this.smallTalk(value);
-    if (/\b(show|what(?:'s| is))\b.*\btoday'?s mission\b|\btoday'?s mission\b/i.test(value)) return this.mission(snapshot.missions);
+    if (/^(?:show|what(?:'s| is))\b.*\btoday'?s mission\b/i.test(value)) return this.mission(snapshot.missions);
     if (/\bwhat goals? am i working on\b|\bshow (?:my )?goals?\b/i.test(value)) return this.goals(snapshot.goals);
     if (/\bsummarize (?:everything|my career|career)\b/i.test(value)) return this.summary(snapshot);
     if (/\bclosest deadline\b|\bdeadline is closest\b/i.test(value)) return this.closestDeadline(snapshot.opportunities);
@@ -48,7 +48,8 @@ export class RepositoryResponseService {
   }
 
   private summary(snapshot: ReturnType<typeof dataService.repository.getSnapshot>): string {
-    return `## CareerOS summary\n\n- Opportunities: ${snapshot.opportunities.length}\n- Active goals: ${snapshot.goals.filter((goal) => goal.status === 'active').length}\n- Today's missions: ${snapshot.missions.length}\n- Certifications: ${snapshot.certifications.length}\n- Journey milestones: ${snapshot.journey.length}`;
+    const certificationCount = new Set([...snapshot.certifications.map((certificate) => certificate.name), ...snapshot.journey.flatMap((entry) => entry.certificates)]).size;
+    return `## CareerOS summary\n\n- Opportunities: ${snapshot.opportunities.length}\n- Active goals: ${snapshot.goals.filter((goal) => goal.status === 'active').length}\n- Today's missions: ${snapshot.missions.length}\n- Certifications: ${certificationCount}\n- Journey milestones: ${snapshot.journey.length}`;
   }
 
   private closestDeadline(opportunities: ReturnType<typeof dataService.repository.getSnapshot>['opportunities']): string {

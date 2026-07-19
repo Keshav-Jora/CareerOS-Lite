@@ -11,9 +11,9 @@ export class ExtractionService {
     const base = { skills: this.skills(message), links: this.links(message), tags: this.tags(message), checklist: this.checklist(message) };
     if (entity === 'opportunity') return this.opportunity(message, base);
     if (entity === 'project') return { ...base, title: this.title(message), description: this.value(message, /\bdescription\s*[:\-]?\s*([^\n]+)/i), technologies: this.skills(message), status: this.status(message), repository: this.links(message).find((link) => /github\.com/i.test(link)), demo: this.links(message).find((link) => !/github\.com/i.test(link)) };
-    if (entity === 'goal') return { title: this.title(message), targetDate: this.dateAfter(message, /\b(?:by|target date|deadline)\s*(?:is|on|:)?\s*/i), priority: this.value(message, /\bpriority\s*[:\-]?\s*(high|medium|low)/i), notes: this.value(message, /\bnotes?\s*[:\-]?\s*([^\n]+)/i) };
+    if (entity === 'goal') return { title: this.goalTitle(message), targetDate: this.dateAfter(message, /\b(?:by|target date|deadline)\s*(?:is|on|:)?\s*/i), priority: this.value(message, /\bpriority\s*[:\-]?\s*(high|medium|low)/i), notes: this.value(message, /\bnotes?\s*[:\-]?\s*([^\n]+)/i) };
     if (entity === 'skill') return { name: this.value(message, /\b(?:add|learn|skill)\s+([A-Za-z0-9.+#-]+)/i) ?? this.skills(message)[0], level: this.value(message, /\b(beginner|intermediate|advanced)\b/i) };
-    if (entity === 'mission') return this.mission(message, base);
+    if (entity === 'mission') return { ...this.mission(message, base), tasks: this.missionTasks(message) };
     if (entity === 'journey') return this.journey(message);
     return { ...base, title: this.title(message) };
   }
@@ -22,6 +22,20 @@ export class ExtractionService {
   private mission(message: string, base: ExtractedPayload): ExtractedPayload {
     return { ...base, title: "Today's Mission", tasks: this.bullets(this.section(message, 'tasks') ?? message), duration: this.value(message, /\b(?:duration|estimated time)\s*:\s*([^\n]+)/i), priority: this.value(message, /\bpriority\s*:\s*(high|medium|low)/i) };
   }
+  private missionTasks(message: string): string[] {
+    const bullets = this.bullets(this.section(message, 'tasks') ?? message);
+    if (bullets.length) return bullets;
+    return message.split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line && !/^today'?s mission\b|^tasks\b|^(?:duration|estimated time|priority)\s*:/i.test(line));
+  }
+  private goalTitle(message: string): string | undefined {
+    const labelled = this.label(message, ['title']);
+    if (labelled) return labelled;
+    const inline = this.value(message, /\bcreate\s+(?:a\s+)?goal\s*[:\-]?\s*([^\n]+)/i);
+    if (inline && !/^goal$/i.test(inline)) return inline;
+    return message.split(/\r?\n/).map((line) => line.trim()).find((line) => line && !/^create\s+(?:a\s+)?goal\b/i.test(line));
+  }
   private journey(message: string): ExtractedPayload {
     const title = message
       .replace(/^\s*(?:i\s+)?(?:completed|finished|built)\s+/i, '')
@@ -29,11 +43,15 @@ export class ExtractionService {
       .replace(/\s+(?:today|yesterday)$/i, '')
       .replace(/\s+certification$/i, '')
       .trim();
-    const journeyType = /\b(certification|certificate)\b/i.test(message)
+    const journeyType = /\b(certification|certificate|foundations?)\b/i.test(message)
       ? 'Certification'
       : /\b(internship|fellowship|job)\b/i.test(message)
         ? 'Internship'
-        : 'Project';
+        : /\b(course|training|learned|learning)\b/i.test(message)
+          ? 'Learning'
+          : /\b(built|project|dashboard|portfolio)\b/i.test(message)
+            ? 'Project'
+            : 'Achievement';
     const date = this.dateAfter(message, /\b(?:on|completed|finished|built)\s*/i) ?? this.normalizeDate('today');
     return {
       title: title || 'Career milestone',
@@ -42,8 +60,8 @@ export class ExtractionService {
       date,
       certificates: journeyType === 'Certification' ? [title] : [],
       built: journeyType === 'Project' ? title : '',
-      achievements: journeyType === 'Internship' ? `Completed ${title}.` : '',
-      learned: journeyType === 'Certification' ? `Completed ${title}.` : '',
+      achievements: journeyType === 'Internship' || journeyType === 'Achievement' ? `Completed ${title}.` : '',
+      learned: journeyType === 'Certification' || journeyType === 'Learning' ? `Completed ${title}.` : '',
       applications: [],
       codingPractice: '',
       isMajorMilestone: true,
