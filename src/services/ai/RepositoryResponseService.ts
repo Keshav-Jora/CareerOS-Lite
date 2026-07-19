@@ -1,4 +1,5 @@
 import { dataService } from '../dataService';
+import { CareerStatisticsService } from '../data/CareerStatisticsService';
 import type { CareerMission } from '../../types/career-data';
 
 /** Answers deterministic CareerOS questions directly from the canonical repository. */
@@ -48,8 +49,8 @@ export class RepositoryResponseService {
   }
 
   private summary(snapshot: ReturnType<typeof dataService.repository.getSnapshot>): string {
-    const certificationCount = new Set([...snapshot.certifications.map((certificate) => certificate.name), ...snapshot.journey.flatMap((entry) => entry.certificates)]).size;
-    return `## CareerOS summary\n\n- Opportunities: ${snapshot.opportunities.length}\n- Active goals: ${snapshot.goals.filter((goal) => goal.status === 'active').length}\n- Today's missions: ${snapshot.missions.length}\n- Certifications: ${certificationCount}\n- Journey milestones: ${snapshot.journey.length}`;
+    const statistics = new CareerStatisticsService().fromSnapshot(snapshot);
+    return `## CareerOS summary\n\n- Opportunities: ${statistics.opportunities}\n- Active goals: ${statistics.activeGoals}\n- Today's missions: ${statistics.missions}\n- Certifications: ${statistics.certifications}\n- Journey milestones: ${statistics.milestones}`;
   }
 
   private closestDeadline(opportunities: ReturnType<typeof dataService.repository.getSnapshot>['opportunities']): string {

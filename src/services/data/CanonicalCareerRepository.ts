@@ -71,9 +71,9 @@ export class CanonicalCareerRepository {
   }
   private persist(entity: CanonicalEntity, values: CanonicalRecord[]): void {
     if (entity === 'opportunity') { const previous = this.getOpportunities(); previous.forEach((value) => { if (!values.some((next) => next.id === value.id)) this.deleteOpportunity(value.id); }); values.forEach((value) => this.saveOpportunity(value as unknown as Opportunity)); return; }
-    if (entity === 'journey') { values.forEach((value) => this.saveJourney(value as unknown as TimelineEntry)); return; }
-    if (entity === 'certification') { values.forEach((value) => this.saveCertification(value as unknown as Certificate)); return; }
-    if (entity === 'note') { values.forEach((value) => this.saveNote(value as unknown as Note)); return; }
+    if (entity === 'journey') { const previous = this.getJourney(); previous.forEach((value) => { if (!values.some((next) => next.id === value.id)) this.deleteJourney(value.id); }); values.forEach((value) => this.saveJourney(value as unknown as TimelineEntry)); return; }
+    if (entity === 'certification') { const previous = this.getCertifications(); previous.forEach((value) => { if (!values.some((next) => next.id === value.id)) this.deleteCertification(value.id); }); values.forEach((value) => this.saveCertification(value as unknown as Certificate)); return; }
+    if (entity === 'note') { const previous = this.getNotes(); previous.forEach((value) => { if (!values.some((next) => next.id === value.id)) this.deleteNote(value.id); }); values.forEach((value) => this.saveNote(value as unknown as Note)); return; }
     if (entity === 'project') { this.saveProjects(values as unknown as CareerProject[]); return; }
     if (entity === 'goal') { this.saveGoals(values as unknown as CareerGoal[]); return; }
     if (entity === 'mission') { this.saveMissions(values as unknown as CareerMission[]); return; }

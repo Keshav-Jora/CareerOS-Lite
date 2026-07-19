@@ -143,7 +143,7 @@ export default function JourneyView({
               <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-500">Certs Earnt</span>
               <div className="flex items-baseline gap-1.5">
                 <span className="text-xl font-display font-black text-slate-100">
-                  {timelineEntries.reduce((acc, curr) => acc + (curr.certificates?.length || 0), 0)}
+                  {journeyMemory.statistics.certifications}
                 </span>
                 <span className="text-[9px] text-amber-400 font-mono font-bold">VERIFIED</span>
               </div>
@@ -152,7 +152,7 @@ export default function JourneyView({
               <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-500">Applications</span>
               <div className="flex items-baseline gap-1.5">
                 <span className="text-xl font-display font-black text-slate-100">
-                  {timelineEntries.reduce((acc, curr) => acc + (curr.applications?.length || 0), 0)}
+                  {journeyMemory.statistics.applications}
                 </span>
                 <span className="text-[9px] text-emerald-400 font-mono font-bold">DISPATCHED</span>
               </div>
@@ -410,7 +410,7 @@ export default function JourneyView({
               <span className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider">Certs Earned</span>
               <div className="flex items-baseline gap-1.5">
                 <span className="text-xl font-display font-bold text-white">
-                  {timelineEntries.reduce((acc, curr) => acc + (curr.certificates?.length || 0), 0)}
+                  {journeyMemory.statistics.certifications}
                 </span>
                 <span className="text-[9px] text-amber-400 font-mono font-bold">VERIFIED</span>
               </div>
@@ -420,7 +420,7 @@ export default function JourneyView({
               <span className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider">Applications</span>
               <div className="flex items-baseline gap-1.5">
                 <span className="text-xl font-display font-bold text-white">
-                  {timelineEntries.reduce((acc, curr) => acc + (curr.applications?.length || 0), 0)}
+                  {journeyMemory.statistics.applications}
                 </span>
                 <span className="text-[9px] text-emerald-400 font-mono font-bold">DISPATCHED</span>
               </div>
@@ -877,7 +877,7 @@ export default function JourneyView({
             <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-500">Certs Earnt</span>
             <div className="flex items-baseline gap-1.5">
               <span className="text-xl font-display font-black text-slate-100">
-                {timelineEntries.reduce((acc, curr) => acc + (curr.certificates?.length || 0), 0)}
+                {journeyMemory.statistics.certifications}
               </span>
               <span className="text-[9px] text-amber-400 font-mono font-bold">VERIFIED</span>
             </div>
@@ -886,7 +886,7 @@ export default function JourneyView({
             <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-500">Applications</span>
             <div className="flex items-baseline gap-1.5">
               <span className="text-xl font-display font-black text-slate-100">
-                {timelineEntries.reduce((acc, curr) => acc + (curr.applications?.length || 0), 0)}
+                {journeyMemory.statistics.applications}
               </span>
               <span className="text-[9px] text-emerald-400 font-mono font-bold">DISPATCHED</span>
             </div>

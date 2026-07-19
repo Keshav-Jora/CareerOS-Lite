@@ -4,6 +4,7 @@ import { ExplainabilityEngine } from '../core/recommendation/ExplainabilityEngin
 import { RecommendationGenerator } from '../core/recommendation/RecommendationGenerator';
 import type { EngineOutput, ExplainabilityTrace, Recommendation } from '../types/core.types';
 import type { TimelineEntry } from '../types';
+import { CareerStatisticsService } from '../services/data/CareerStatisticsService';
 
 export interface JourneyMilestoneMemory {
   id: string;
@@ -28,8 +29,7 @@ export function useJourneyMemory(timelineEntries: TimelineEntry[]) {
     const majorEntry = timelineEntries.find((entry) => entry.isMajorMilestone) ?? latestEntry;
     const buildEntry = timelineEntries.find((entry) => entry.built.trim().length > 0) ?? latestEntry;
     const learningEntry = timelineEntries.find((entry) => entry.learned.trim().length > 0) ?? latestEntry;
-    const applications = timelineEntries.reduce((total, entry) => total + entry.applications.length, 0);
-    const certifications = timelineEntries.reduce((total, entry) => total + entry.certificates.length, 0);
+    const statistics = new CareerStatisticsService().fromJourney(timelineEntries);
     const codingEntries = timelineEntries.filter((entry) => entry.codingPractice.trim().length > 0).length;
 
     return {
@@ -37,12 +37,13 @@ export function useJourneyMemory(timelineEntries: TimelineEntry[]) {
       memoryStatus: 'AI memory is synchronized',
       milestones,
       growth: {
-        projects: timelineEntries.filter((entry) => entry.built.trim().length > 0).length,
+        projects: statistics.projects,
         skills: timelineEntries.filter((entry) => entry.learned.trim().length > 0).length,
-        applications,
-        certifications,
+        applications: statistics.applications,
+        certifications: statistics.certifications,
         codingProgress: codingEntries,
       },
+      statistics,
       reflections: {
         biggestAchievement: majorEntry?.achievements || majorEntry?.built || 'Log a milestone to start building your career memory.',
         strongestImprovement: buildEntry?.built || 'Your next build will become a visible record of progress.',

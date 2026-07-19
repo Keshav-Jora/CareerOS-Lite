@@ -40,7 +40,7 @@ export default function NovaWorkspace({
   userName = 'Student',
   onNavigateToView,
 }: NovaWorkspaceProps) {
-  const nova = useNovaWorkspace({ opportunities, progress, certificates });
+  const nova = useNovaWorkspace({ opportunities, progress, certificates, timeline });
   const primaryAction = nova.actionForRecommendation(nova.topRecommendation);
   const isDark = theme === 'dark';
 

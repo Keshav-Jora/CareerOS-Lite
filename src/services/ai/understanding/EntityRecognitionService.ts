@@ -6,7 +6,7 @@ export interface EntityDetection { entity: ActionEntity | null; confidence: Inte
 interface EntityRule { entity: ActionEntity; weight: number; expression: RegExp; intents?: ActionIntent[]; }
 
 const rules: EntityRule[] = [
-  { entity: 'opportunity', weight: 3, expression: /\b(opportunity|application|internship|hackathon|fellowship|competition|job|scholarship|volunteer|open source(?: program)?|training|bootcamp|grid)\b/i },
+  { entity: 'opportunity', weight: 3, expression: /\b(opportunity|application|internship|intern|hackathon|fellowship|competition|job|scholarship|volunteer|open source(?: program)?|training|bootcamp|grid)\b/i },
   { entity: 'journey', weight: 3, expression: /\b(journey|milestone|achievement|timeline)\b/i },
   { entity: 'project', weight: 3, expression: /\b(project|portfolio|repository|repo)\b/i },
   { entity: 'goal', weight: 3, expression: /\b(goal|objective|target)\b/i },

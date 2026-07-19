@@ -25,8 +25,26 @@ export class ActionRouter {
     if (plan.requiresConfirmation) return { success: false, entity: plan.entity, operation: plan.operation, message: 'Confirmation is required before this action can run.', reason: 'confirmation-required' };
     if (!plan.entity) return { success: false, entity: null, operation: plan.operation, message: 'No supported entity was detected.', reason: 'unsupported-operation' };
     const repository = dataService.repository; const entity = plan.entity as CanonicalEntity;
-    const payload = plan.operation === 'create' ? this.payloadAdapter.normalize(entity, plan.payload) : plan.payload;
-    if (plan.operation === 'create') { const data = repository.create(entity, payload as never); return repository.get(entity, data.id) ? this.planSuccess(entity, plan.operation, 'Created successfully.', data) : { success: false, entity, operation: plan.operation, message: 'Persistence verification failed.' }; }
+    const payload = plan.operation === 'create'
+      ? this.payloadAdapter.normalize(entity, plan.payload)
+      : this.updatePayload(plan.payload);
+    if (plan.operation === 'create') {
+      const duplicate = this.findDuplicate(entity, payload);
+      if (duplicate) {
+        return {
+          success: false,
+          entity,
+          operation: plan.operation,
+          message: entity === 'opportunity'
+            ? 'Opportunity already exists. You can update it instead.'
+            : 'That career milestone already exists. I did not create a duplicate.',
+          reason: 'unsupported-operation',
+          data: duplicate,
+        };
+      }
+      const data = repository.create(entity, payload as never);
+      return repository.get(entity, data.id) ? this.planSuccess(entity, plan.operation, 'Created successfully.', data) : { success: false, entity, operation: plan.operation, message: 'Persistence verification failed.' };
+    }
     if (plan.operation === 'update') { const id = this.targetId(plan, entity); if (!id) return this.targetMissing(entity, plan.operation); const data = repository.update(entity, id, payload as never); return data && repository.get(entity, id) ? this.planSuccess(entity, plan.operation, 'Updated successfully.', data) : this.targetMissing(entity, plan.operation); }
     if (plan.operation === 'delete') { const id = this.targetId(plan, entity); if (!id) return this.targetMissing(entity, plan.operation); return repository.delete(entity, id) ? this.planSuccess(entity, plan.operation, 'Deleted successfully.') : this.targetMissing(entity, plan.operation); }
     if (plan.operation === 'archive' || plan.operation === 'restore' || plan.operation === 'complete') { const id = this.targetId(plan, entity); if (!id) return this.targetMissing(entity, plan.operation); const status = plan.operation === 'archive' ? 'archived' : plan.operation === 'restore' ? 'active' : 'completed'; const data = repository.update(entity, id, { status } as never); return data ? this.planSuccess(entity, plan.operation, `${plan.operation} successfully.`, data) : this.targetMissing(entity, plan.operation); }
@@ -120,13 +138,59 @@ export class ActionRouter {
     if (typeof plan.payload.id === 'string') return plan.payload.id;
     const title = typeof plan.payload.title === 'string' ? plan.payload.title.trim().toLowerCase() : '';
     if (!title) return undefined;
-    const match = dataService.repository.getAll<Record<string, unknown> & { id: string }>(entity).find((item) => {
+    const matches = dataService.repository.getAll<Record<string, unknown> & { id: string }>(entity).filter((item) => {
       const candidate = typeof item.title === 'string' ? item.title : typeof item.name === 'string' ? item.name : '';
-      return candidate.toLowerCase() === title || candidate.toLowerCase().includes(title);
+      const normalized = candidate.trim().toLowerCase();
+      return normalized === title || normalized.includes(title) || title.includes(normalized);
     });
-    return match?.id;
+    if (matches.length === 1) return matches[0].id;
+
+    const organization = typeof plan.payload.organization === 'string'
+      ? plan.payload.organization.trim().toLowerCase()
+      : typeof plan.payload.company === 'string'
+        ? plan.payload.company.trim().toLowerCase()
+        : '';
+    if (organization) {
+      const organizationMatches = matches.filter((item) => {
+        const candidate = typeof item.organization === 'string' ? item.organization.trim().toLowerCase() : '';
+        return candidate === organization || candidate.includes(organization) || organization.includes(candidate);
+      });
+      if (organizationMatches.length === 1) return organizationMatches[0].id;
+    }
+    const sourceOrganizationMatches = matches.filter((item) => {
+      const candidate = typeof item.organization === 'string' ? item.organization.trim().toLowerCase() : '';
+      return candidate.length > 0 && plan.sourceMessage.toLowerCase().includes(candidate);
+    });
+    if (sourceOrganizationMatches.length === 1) return sourceOrganizationMatches[0].id;
+    return undefined;
   }
-  private targetMissing(entity: CanonicalEntity, operation: ActionOperation): ActionPlanExecutionResult { return { success: false, entity, operation, message: 'A valid target id is required.', reason: 'target-not-found' }; }
+  private findDuplicate(entity: CanonicalEntity, payload: Record<string, unknown>): Record<string, unknown> | undefined {
+    if (entity !== 'opportunity' && entity !== 'journey') return undefined;
+    const title = typeof payload.title === 'string' ? payload.title.trim().toLowerCase() : '';
+    if (!title) return undefined;
+
+    return dataService.repository.getAll<Record<string, unknown> & { id: string }>(entity).find((item) => {
+      const existingTitle = typeof item.title === 'string'
+        ? item.title.trim().toLowerCase()
+        : entity === 'journey'
+          ? [item.achievements, item.built, item.learned, ...(Array.isArray(item.certificates) ? item.certificates : [])]
+            .filter((value): value is string => typeof value === 'string')
+            .join(' ')
+            .toLowerCase()
+          : '';
+      if (entity === 'journey') return existingTitle.includes(title);
+
+      const organization = typeof payload.organization === 'string' ? payload.organization.trim().toLowerCase() : '';
+      const category = typeof payload.category === 'string' ? payload.category.trim().toLowerCase() : '';
+      const existingOrganization = typeof item.organization === 'string' ? item.organization.trim().toLowerCase() : '';
+      const existingCategory = typeof item.category === 'string' ? item.category.trim().toLowerCase() : '';
+      return existingTitle === title && existingOrganization === organization && existingCategory === category;
+    });
+  }
+  private updatePayload(payload: Record<string, unknown>): Record<string, unknown> {
+    return Object.fromEntries(Object.entries(payload).filter(([, value]) => value !== undefined && (!Array.isArray(value) || value.length > 0)));
+  }
+  private targetMissing(entity: CanonicalEntity, operation: ActionOperation): ActionPlanExecutionResult { return { success: false, entity, operation, message: `I could not find that ${entity}. Please include its title${entity === 'opportunity' ? ' and company if there are duplicates' : ''}.`, reason: 'target-not-found' }; }
   private planSuccess(entity: CanonicalEntity, operation: ActionOperation, message: string, data?: unknown): ActionPlanExecutionResult { return { success: true, entity, operation, message, data }; }
 }
 

@@ -22,6 +22,7 @@ import {
 import type { ActivityLog, Certificate, DailyProgress, Note, Opportunity, TimelineEntry } from '../types';
 import type { CareerMission, MissionTask } from '../types/career-data';
 import { useDashboardIntelligence } from '../hooks/useDashboardIntelligence';
+import { CareerStatisticsService } from '../services/data/CareerStatisticsService';
 
 interface DashboardViewProps {
   theme: 'light' | 'dark';
@@ -77,6 +78,7 @@ export default function DashboardView({
     notes,
     userName,
   });
+  const statistics = new CareerStatisticsService().fromWorkspace({ opportunities, journey: timelineEntries, certifications: certificates });
   const { recommendation, featuredOpportunity } = intelligence;
   const isDark = theme === 'dark';
   const surface = isDark ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-white/90 shadow-sm';
@@ -123,7 +125,7 @@ export default function DashboardView({
             <div className="mt-5 flex flex-wrap gap-3">
               <MetricPill label="Weekly trend" value={trendLabel} isDark={isDark} />
               <MetricPill label="Data confidence" value={`${intelligence.confidence}%`} isDark={isDark} />
-              <MetricPill label="Active pipeline" value={`${opportunities.filter((item) => !['Completed', 'Selected', 'Rejected'].includes(item.status)).length} opportunities`} isDark={isDark} />
+              <MetricPill label="Active pipeline" value={`${statistics.activeOpportunities} opportunities`} isDark={isDark} />
             </div>
           </div>
           <div className={`rounded-2xl border p-4 ${isDark ? 'border-indigo-400/20 bg-indigo-500/10' : 'border-indigo-100 bg-indigo-50/80'}`}>
