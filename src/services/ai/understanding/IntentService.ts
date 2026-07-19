@@ -27,6 +27,9 @@ export class IntentService {
   detect(message: string): IntentDetection {
     const value = message.trim();
     if (!value) return { intent: null, confidence: 'low' };
+    if (/^\s*today'?s mission\s*:/im.test(value)) {
+      return { intent: 'create', confidence: 'high' };
+    }
     const scores = patterns.reduce<Map<ActionIntent, number>>((result, pattern) => {
       if (pattern.expression.test(value)) result.set(pattern.intent, (result.get(pattern.intent) ?? 0) + pattern.weight);
       return result;
@@ -37,3 +40,4 @@ export class IntentService {
     return { intent, confidence: score >= 3 ? 'high' : score === 2 ? 'medium' : 'low' };
   }
 }
+

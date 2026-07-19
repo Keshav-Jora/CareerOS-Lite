@@ -42,6 +42,7 @@ export default function App() {
     notes,
     notifications,
     activities,
+    canonicalData,
     userName,
     userSchool,
     userGrad,
@@ -105,6 +106,7 @@ export default function App() {
             streak={streak}
             userName={userName}
             userSchool={userSchool}
+            dailyMission={canonicalData?.missions.find((mission) => mission.date === new Date().toISOString().slice(0, 10))}
           />
         );
       case 'nova':

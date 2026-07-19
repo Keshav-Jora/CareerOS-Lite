@@ -20,6 +20,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import type { ActivityLog, Certificate, DailyProgress, Note, Opportunity, TimelineEntry } from '../types';
+import type { CareerMission } from '../types/career-data';
 import { useDashboardIntelligence } from '../hooks/useDashboardIntelligence';
 
 interface DashboardViewProps {
@@ -39,6 +40,7 @@ interface DashboardViewProps {
   streak?: number;
   userName?: string;
   userSchool?: string;
+  dailyMission?: CareerMission;
 }
 
 const quickActions = [
@@ -59,6 +61,7 @@ export default function DashboardView({
   onAddOpportunityTrigger,
   onNavigateToView,
   userName = 'Student',
+  dailyMission,
 }: DashboardViewProps) {
   const [missionComplete, setMissionComplete] = useState(false);
   const intelligence = useDashboardIntelligence({
@@ -75,6 +78,9 @@ export default function DashboardView({
   const surface = isDark ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-white/90 shadow-sm';
   const mutedText = isDark ? 'text-slate-400' : 'text-slate-600';
   const headingText = isDark ? 'text-white' : 'text-slate-950';
+  const missionTitle = dailyMission?.title ?? recommendation.todayMission.title;
+  const missionDescription = dailyMission ? 'Created by Nova for today.' : recommendation.todayMission.description;
+  const missionStatus = dailyMission?.status === 'completed' ? 'Complete' : dailyMission?.status === 'skipped' ? 'Skipped' : missionComplete ? 'Complete' : 'Open';
   const trendLabel = intelligence.weeklyTrend === 0
     ? 'Stable this week'
     : `${intelligence.weeklyTrend > 0 ? '↑' : '↓'} ${Math.abs(intelligence.weeklyTrend)}h this week`;
@@ -160,9 +166,9 @@ export default function DashboardView({
 
       <div className="grid gap-6 xl:grid-cols-2">
         <section className={`rounded-3xl border p-6 ${surface}`} aria-labelledby="mission-title">
-          <div className="flex items-center justify-between gap-4"><div><div className="flex items-center gap-2 text-sm font-semibold text-amber-400"><Target className="h-4 w-4" aria-hidden="true" /> Today’s mission</div><h2 id="mission-title" className={`mt-2 font-display text-xl font-bold ${headingText}`}>{recommendation.todayMission.title}</h2></div><span className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide ${priorityClass(recommendation.todayMission.priority)}`}>{recommendation.todayMission.priority}</span></div>
-          <p className={`mt-3 text-sm leading-6 ${mutedText}`}>{recommendation.todayMission.description}</p>
-          <div className={`mt-5 grid grid-cols-3 divide-x rounded-xl border ${isDark ? 'divide-slate-800 border-slate-800 bg-slate-950/35' : 'divide-slate-200 border-slate-200 bg-slate-50'}`}><MissionMetric label="Duration" value={intelligence.estimatedDuration} /><MissionMetric label="Impact" value={intelligence.expectedImpact} /><MissionMetric label="Status" value={missionComplete ? 'Complete' : 'Open'} /></div>
+          <div className="flex items-center justify-between gap-4"><div><div className="flex items-center gap-2 text-sm font-semibold text-amber-400"><Target className="h-4 w-4" aria-hidden="true" /> Today’s mission</div><h2 id="mission-title" className={`mt-2 font-display text-xl font-bold ${headingText}`}>{missionTitle}</h2></div><span className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide ${priorityClass(recommendation.todayMission.priority)}`}>{recommendation.todayMission.priority}</span></div>
+          <p className={`mt-3 text-sm leading-6 ${mutedText}`}>{missionDescription}</p>
+          <div className={`mt-5 grid grid-cols-3 divide-x rounded-xl border ${isDark ? 'divide-slate-800 border-slate-800 bg-slate-950/35' : 'divide-slate-200 border-slate-200 bg-slate-50'}`}><MissionMetric label="Duration" value={intelligence.estimatedDuration} /><MissionMetric label="Impact" value={intelligence.expectedImpact} /><MissionMetric label="Status" value={missionStatus} /></div>
         </section>
 
         <section className={`rounded-3xl border p-6 ${surface}`} aria-labelledby="highest-priority-title">
