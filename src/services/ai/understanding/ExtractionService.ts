@@ -18,7 +18,7 @@ export class ExtractionService {
     return { ...base, title: this.title(message) };
   }
 
-  private title(message: string): string | undefined { return this.label(message, ['title']) ?? this.value(message, /\b(?:add|create|update|registered for|track)\s+(?!a new opportunity\b|new opportunity\b|opportunity\b|project\b)([^\n.]+)/i); }
+  private title(message: string): string | undefined { return this.label(message, ['title']) ?? this.value(message, /\b(?:add|create|update|delete|remove|archive|registered for|track)\s+(?!a new opportunity\b|new opportunity\b|opportunity\b|project\b)([^\n.]+)/i); }
   private mission(message: string, base: ExtractedPayload): ExtractedPayload {
     return { ...base, title: "Today's Mission", tasks: this.bullets(this.section(message, 'tasks') ?? message), duration: this.value(message, /\b(?:duration|estimated time)\s*:\s*([^\n]+)/i), priority: this.value(message, /\bpriority\s*:\s*(high|medium|low)/i) };
   }
@@ -64,7 +64,15 @@ export class ExtractionService {
     return result;
   }
   private sectionArray(value: string | undefined, hashtag = false): string[] | undefined { if (value === undefined) return undefined; return value.split(/\n|,/).map((item) => item.replace(/^[-*]\s*/, '').replace(/^#/, '').trim()).filter(Boolean).map((item) => hashtag ? item.replace(/^#/, '') : item); }
-  private normalizeCategory(value: string | undefined): string | undefined { return value ? value.replace(/\b\w/g, (letter) => letter.toUpperCase()) : undefined; }
+  private normalizeCategory(value: string | undefined): string | undefined {
+    if (!value) return undefined;
+    const normalized = value.trim().toLowerCase().replace(/\s+/g, ' ');
+    const aliases: Record<string, string> = {
+      intern: 'Internship', internship: 'Internship', job: 'Job', scholarship: 'Scholarship', fellowship: 'Fellowship', competition: 'Competition', volunteer: 'Volunteer',
+      'open source': 'Open Source Program', 'open source program': 'Open Source Program', oss: 'Open Source Program', training: 'Training', bootcamp: 'Bootcamp',
+    };
+    return aliases[normalized] ?? normalized.replace(/\b\w/g, (letter) => letter.toUpperCase());
+  }
   private label(message: string, labels: string[]): string | undefined { const expression = new RegExp(`(?:^|\\n)\\s*(?:${labels.join('|')})\\s*:\\s*([^\\n]+)`, 'i'); return this.value(message, expression); }
   private value(message: string, expression: RegExp): string | undefined { return message.match(expression)?.[1]?.trim(); }
   private skills(message: string): string[] { const section = this.section(message, 'skills'); const source = section ?? message; const lower = source.toLowerCase(); return [...new Set(knownSkills.filter((skill) => lower.includes(skill.toLowerCase())).concat(section ? this.bullets(section) : []))]; }
@@ -73,7 +81,13 @@ export class ExtractionService {
   private checklist(message: string): string[] { return this.bullets(this.section(message, 'checklist') ?? message); }
   private bullets(message: string): string[] { return (message.match(/(?:^|\n)\s*[-*]\s+(.+)/g) ?? []).map((item) => item.replace(/(?:^|\n)\s*[-*]\s+/, '').trim()); }
   private section(message: string, label: string): string | undefined { const match = message.match(new RegExp(`(?:^|\\n)\\s*${label}\\s*:\\s*([\\s\\S]*?)(?=\\n\\s*[A-Za-z ]+\\s*:|$)`, 'i')); return match?.[1]; }
-  private category(message: string): string | undefined { const value = this.label(message, ['category']) ?? this.value(message, /\b(internship|hackathon|job|competition|scholarship|course|research|volunteer|startup)\b/i); return value ? value.replace(/\b\w/g, (letter) => letter.toUpperCase()) : undefined; }
+  private category(message: string): string | undefined {
+    const labelled = this.label(message, ['category']);
+    if (labelled) return this.normalizeCategory(labelled);
+    const detected = ['open source program', 'open source', 'oss', 'internship', 'intern', 'hackathon', 'job', 'scholarship', 'fellowship', 'competition', 'volunteer', 'training', 'bootcamp', 'course', 'research', 'startup']
+      .find((category) => new RegExp('\\b' + category.replaceAll(' ', '\\s+') + '\\b', 'i').test(message));
+    return this.normalizeCategory(detected);
+  }
   private status(message: string): string | undefined { return this.value(message, /\b(saved|planned|applied|under review|shortlisted|interview|selected|rejected|completed)\b/i); }
   private dateAfter(message: string, marker: RegExp): string | undefined { const match = message.match(marker); if (!match) return undefined; const value = message.slice(match.index! + match[0].length).match(/^(today|tomorrow|next monday|\d{4}-\d{2}-\d{2}|\d{1,2}\s+[A-Za-z]+(?:\s*,?\s*\d{4})?|[A-Za-z]+\s+\d{1,2}(?:,?\s*\d{4})?)/i)?.[1]; return value ? this.normalizeDate(value) : undefined; }
   private normalizeDate(value: string): string | undefined { const today = new Date(); if (/^today$/i.test(value)) return this.isoDate(today); if (/^tomorrow$/i.test(value)) { today.setDate(today.getDate() + 1); return this.isoDate(today); } if (/^next monday$/i.test(value)) { today.setDate(today.getDate() + ((8 - today.getDay()) % 7 || 7)); return this.isoDate(today); } const parsed = new Date(value); return Number.isNaN(parsed.getTime()) ? undefined : this.isoDate(parsed); }

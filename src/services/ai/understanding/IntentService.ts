@@ -27,7 +27,10 @@ export class IntentService {
   detect(message: string): IntentDetection {
     const value = message.trim();
     if (!value) return { intent: null, confidence: 'low' };
-    if (/^\s*today'?s mission\s*:/im.test(value)) {
+    if (/^\s*today'?s mission\b/im.test(value)) {
+      return { intent: 'create', confidence: 'high' };
+    }
+    if (/\b(completed|finished|built)\b/i.test(value)) {
       return { intent: 'create', confidence: 'high' };
     }
     if (/\b(completed|finished|built)\b/i.test(value)) {

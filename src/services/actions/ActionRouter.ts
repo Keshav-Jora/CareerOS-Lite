@@ -27,9 +27,9 @@ export class ActionRouter {
     const repository = dataService.repository; const entity = plan.entity as CanonicalEntity;
     const payload = this.payloadAdapter.normalize(entity, plan.payload);
     if (plan.operation === 'create') { const data = repository.create(entity, payload as never); return repository.get(entity, data.id) ? this.planSuccess(entity, plan.operation, 'Created successfully.', data) : { success: false, entity, operation: plan.operation, message: 'Persistence verification failed.' }; }
-    if (plan.operation === 'update') { const id = this.targetId(plan); if (!id) return this.targetMissing(entity, plan.operation); const data = repository.update(entity, id, payload as never); return data && repository.get(entity, id) ? this.planSuccess(entity, plan.operation, 'Updated successfully.', data) : this.targetMissing(entity, plan.operation); }
-    if (plan.operation === 'delete') { const id = this.targetId(plan); if (!id) return this.targetMissing(entity, plan.operation); return repository.delete(entity, id) ? this.planSuccess(entity, plan.operation, 'Deleted successfully.') : this.targetMissing(entity, plan.operation); }
-    if (plan.operation === 'archive' || plan.operation === 'restore' || plan.operation === 'complete') { const id = this.targetId(plan); if (!id) return this.targetMissing(entity, plan.operation); const status = plan.operation === 'archive' ? 'archived' : plan.operation === 'restore' ? 'active' : 'completed'; const data = repository.update(entity, id, { status } as never); return data ? this.planSuccess(entity, plan.operation, `${plan.operation} successfully.`, data) : this.targetMissing(entity, plan.operation); }
+    if (plan.operation === 'update') { const id = this.targetId(plan, entity); if (!id) return this.targetMissing(entity, plan.operation); const data = repository.update(entity, id, payload as never); return data && repository.get(entity, id) ? this.planSuccess(entity, plan.operation, 'Updated successfully.', data) : this.targetMissing(entity, plan.operation); }
+    if (plan.operation === 'delete') { const id = this.targetId(plan, entity); if (!id) return this.targetMissing(entity, plan.operation); return repository.delete(entity, id) ? this.planSuccess(entity, plan.operation, 'Deleted successfully.') : this.targetMissing(entity, plan.operation); }
+    if (plan.operation === 'archive' || plan.operation === 'restore' || plan.operation === 'complete') { const id = this.targetId(plan, entity); if (!id) return this.targetMissing(entity, plan.operation); const status = plan.operation === 'archive' ? 'archived' : plan.operation === 'restore' ? 'active' : 'completed'; const data = repository.update(entity, id, { status } as never); return data ? this.planSuccess(entity, plan.operation, `${plan.operation} successfully.`, data) : this.targetMissing(entity, plan.operation); }
     const query = typeof plan.payload.query === 'string' ? plan.payload.query : plan.sourceMessage;
     const data = plan.intent === 'search' ? repository.search(entity, query) : repository.getAll(entity);
     return this.planSuccess(entity, plan.operation, 'Results retrieved successfully.', data);
@@ -116,7 +116,16 @@ export class ActionRouter {
     return success(`✓ Today’s DSA progress is now **${dsaQuestions} questions**.`);
   }
 
-  private targetId(plan: ActionPlan): string | undefined { const id = plan.payload.id; return typeof id === 'string' ? id : undefined; }
+  private targetId(plan: ActionPlan, entity: CanonicalEntity): string | undefined {
+    if (typeof plan.payload.id === 'string') return plan.payload.id;
+    const title = typeof plan.payload.title === 'string' ? plan.payload.title.trim().toLowerCase() : '';
+    if (!title) return undefined;
+    const match = dataService.repository.getAll<Record<string, unknown> & { id: string }>(entity).find((item) => {
+      const candidate = typeof item.title === 'string' ? item.title : typeof item.name === 'string' ? item.name : '';
+      return candidate.toLowerCase() === title || candidate.toLowerCase().includes(title);
+    });
+    return match?.id;
+  }
   private targetMissing(entity: CanonicalEntity, operation: ActionOperation): ActionPlanExecutionResult { return { success: false, entity, operation, message: 'A valid target id is required.', reason: 'target-not-found' }; }
   private planSuccess(entity: CanonicalEntity, operation: ActionOperation, message: string, data?: unknown): ActionPlanExecutionResult { return { success: true, entity, operation, message, data }; }
 }

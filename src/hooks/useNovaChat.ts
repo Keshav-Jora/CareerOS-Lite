@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { GeminiService } from '../services/ai/GeminiService';
 import { ActionRouter } from '../services/actions/ActionRouter';
 import { NovaUnderstandingEngine } from '../services/ai/NovaUnderstandingEngine';
+import type { ActionPlan } from '../services/ai/understanding/ActionPlanBuilder';
 import type { NovaChatContext, NovaChatMessage } from '../services/ai/types';
 
 export type NovaAssistantState = 'idle' | 'reading' | 'thinking' | 'streaming';
@@ -14,6 +15,7 @@ export function useNovaChat(context: NovaChatContext, onActionExecuted?: () => v
   const service = useRef(new GeminiService());
   const actionRouter = useRef(new ActionRouter());
   const understandingEngine = useRef(new NovaUnderstandingEngine());
+  const pendingAction = useRef<ActionPlan | null>(null);
 
   useEffect(() => {
     setMessages([{
@@ -36,15 +38,37 @@ export function useNovaChat(context: NovaChatContext, onActionExecuted?: () => v
     setAssistantState('reading');
 
     try {
-      const plan = understandingEngine.current.understand(trimmedMessage);
-      const isMutation = ['create', 'update', 'delete', 'archive', 'restore', 'complete'].includes(plan.operation);
-      if (isMutation) {
-        const actionResult = actionRouter.current.routePlan(plan);
+      const confirmation = confirmationResponse(trimmedMessage);
+      if (pendingAction.current && confirmation) {
+        const pending = pendingAction.current;
+        pendingAction.current = null;
+        const actionResult = confirmation === 'cancelled'
+          ? { success: false, message: 'Cancelled. No changes were made.' }
+          : actionRouter.current.routePlan({ ...pending, requiresConfirmation: false });
         if (actionResult.success) onActionExecuted?.();
         setMessages((current) => [...current, {
           id: `model-action-${Date.now()}`,
           role: 'model',
-          text: actionResult.success ? actionResult.message : actionResult.issues?.map((issue) => `- ${issue.message}`).join('\n') ?? actionResult.message,
+          text: actionResult.message,
+          timestamp: new Date(),
+        }]);
+        return;
+      }
+      const plan = understandingEngine.current.understand(trimmedMessage);
+      const isMutation = ['create', 'update', 'delete', 'archive', 'restore', 'complete'].includes(plan.operation);
+      if (isMutation) {
+        const actionResult = actionRouter.current.routePlan(plan);
+        if (actionResult.reason === 'confirmation-required' && plan.validation.valid) {
+          pendingAction.current = plan;
+        }
+        if (actionResult.success) onActionExecuted?.();
+        const responseText = actionResult.reason === 'confirmation-required'
+          ? `Are you sure you want to delete ${typeof plan.payload.title === 'string' ? plan.payload.title : 'this item'}? Reply yes to continue or cancel to stop.`
+          : actionResult.success ? actionResult.message : actionResult.issues?.map((issue) => `- ${issue.message}`).join('\n') ?? actionResult.message;
+        setMessages((current) => [...current, {
+          id: `model-action-${Date.now()}`,
+          role: 'model',
+          text: responseText,
           timestamp: new Date(),
         }]);
         return;
@@ -72,4 +96,11 @@ export function useNovaChat(context: NovaChatContext, onActionExecuted?: () => v
   }, [context, messages, onActionExecuted]);
 
   return { messages, inputText, setInputText, assistantState, sendMessage };
+}
+
+function confirmationResponse(message: string): 'confirmed' | 'cancelled' | null {
+  const value = message.trim().toLowerCase();
+  if (/^(yes|confirm|yes delete it|delete it|go ahead)$/i.test(value)) return 'confirmed';
+  if (/^(cancel|no)$/i.test(value)) return 'cancelled';
+  return null;
 }

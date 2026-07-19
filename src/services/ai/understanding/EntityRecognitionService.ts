@@ -6,7 +6,7 @@ export interface EntityDetection { entity: ActionEntity | null; confidence: Inte
 interface EntityRule { entity: ActionEntity; weight: number; expression: RegExp; intents?: ActionIntent[]; }
 
 const rules: EntityRule[] = [
-  { entity: 'opportunity', weight: 3, expression: /\b(opportunity|application|internship|hackathon|fellowship|competition|grid)\b/i },
+  { entity: 'opportunity', weight: 3, expression: /\b(opportunity|application|internship|hackathon|fellowship|competition|job|scholarship|volunteer|open source(?: program)?|training|bootcamp|grid)\b/i },
   { entity: 'journey', weight: 3, expression: /\b(journey|milestone|achievement|timeline)\b/i },
   { entity: 'project', weight: 3, expression: /\b(project|portfolio|repository|repo)\b/i },
   { entity: 'goal', weight: 3, expression: /\b(goal|objective|target)\b/i },
@@ -22,6 +22,7 @@ const rules: EntityRule[] = [
 export class EntityRecognitionService {
   detectEntity(message: string, intent?: ActionIntent | null): EntityDetection {
     if (!message.trim()) return { entity: null, confidence: 'low' };
+    if (intent === 'create' && /\b(completed|finished|built)\b/i.test(message)) return { entity: 'journey', confidence: 'high' };
     if (intent === 'create' && /\b(completed|finished|built)\b/i.test(message)) return { entity: 'journey', confidence: 'high' };
     const scores = rules.reduce<Map<ActionEntity, number>>((result, rule) => {
       if (rule.expression.test(message) && (!rule.intents || (intent ? rule.intents.includes(intent) : true))) result.set(rule.entity, (result.get(rule.entity) ?? 0) + rule.weight);
