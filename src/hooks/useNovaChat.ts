@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { GeminiService } from '../services/ai/GeminiService';
+import { RepositoryResponseService } from '../services/ai/RepositoryResponseService';
 import { ActionRouter } from '../services/actions/ActionRouter';
 import { NovaUnderstandingEngine } from '../services/ai/NovaUnderstandingEngine';
 import type { ActionPlan } from '../services/ai/understanding/ActionPlanBuilder';
@@ -15,6 +16,7 @@ export function useNovaChat(context: NovaChatContext, onActionExecuted?: () => v
   const service = useRef(new GeminiService());
   const actionRouter = useRef(new ActionRouter());
   const understandingEngine = useRef(new NovaUnderstandingEngine());
+  const repositoryResponses = useRef(new RepositoryResponseService());
   const pendingAction = useRef<ActionPlan | null>(null);
 
   useEffect(() => {
@@ -37,6 +39,7 @@ export function useNovaChat(context: NovaChatContext, onActionExecuted?: () => v
     setInputText('');
     setAssistantState('reading');
 
+    let responseId: string | undefined;
     try {
       const confirmation = confirmationResponse(trimmedMessage);
       if (pendingAction.current && confirmation) {
@@ -50,6 +53,16 @@ export function useNovaChat(context: NovaChatContext, onActionExecuted?: () => v
           id: `model-action-${Date.now()}`,
           role: 'model',
           text: actionResult.message,
+          timestamp: new Date(),
+        }]);
+        return;
+      }
+      const repositoryResponse = repositoryResponses.current.respond(trimmedMessage);
+      if (repositoryResponse) {
+        setMessages((current) => [...current, {
+          id: `model-local-${Date.now()}`,
+          role: 'model',
+          text: repositoryResponse,
           timestamp: new Date(),
         }]);
         return;
@@ -75,7 +88,7 @@ export function useNovaChat(context: NovaChatContext, onActionExecuted?: () => v
       }
 
       setAssistantState('thinking');
-      const responseId = `model-${Date.now()}`;
+      responseId = `model-${Date.now()}`;
       setMessages((current) => [...current, { id: responseId, role: 'model', text: '', timestamp: new Date(), isStreaming: true }]);
       setAssistantState('streaming');
 
@@ -87,8 +100,10 @@ export function useNovaChat(context: NovaChatContext, onActionExecuted?: () => v
 
       setMessages((current) => current.map((entry) => entry.id === responseId ? { ...entry, isStreaming: false } : entry));
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Nova could not complete that request. Please try again.';
-      setMessages((current) => current.map((entry) => entry.isStreaming ? { ...entry, text: errorMessage, isStreaming: false } : entry));
+      console.error('Nova Gemini request failed.', error);
+      const fallback = repositoryResponses.current.fallback();
+      if (responseId) setMessages((current) => current.map((entry) => entry.id === responseId ? { ...entry, text: fallback, isStreaming: false } : entry));
+      else setMessages((current) => [...current, { id: `model-fallback-${Date.now()}`, role: 'model', text: fallback, timestamp: new Date() }]);
     } finally {
       isRequestInFlight.current = false;
       setAssistantState('idle');

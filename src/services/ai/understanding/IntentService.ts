@@ -36,6 +36,9 @@ export class IntentService {
     if (/\b(completed|finished|built)\b/i.test(value)) {
       return { intent: 'create', confidence: 'high' };
     }
+    if (/^\s*(update|change|edit|set)\b/i.test(value)) {
+      return { intent: 'update', confidence: 'high' };
+    }
     const scores = patterns.reduce<Map<ActionIntent, number>>((result, pattern) => {
       if (pattern.expression.test(value)) result.set(pattern.intent, (result.get(pattern.intent) ?? 0) + pattern.weight);
       return result;

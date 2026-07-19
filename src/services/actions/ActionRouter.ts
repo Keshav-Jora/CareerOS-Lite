@@ -25,7 +25,7 @@ export class ActionRouter {
     if (plan.requiresConfirmation) return { success: false, entity: plan.entity, operation: plan.operation, message: 'Confirmation is required before this action can run.', reason: 'confirmation-required' };
     if (!plan.entity) return { success: false, entity: null, operation: plan.operation, message: 'No supported entity was detected.', reason: 'unsupported-operation' };
     const repository = dataService.repository; const entity = plan.entity as CanonicalEntity;
-    const payload = this.payloadAdapter.normalize(entity, plan.payload);
+    const payload = plan.operation === 'create' ? this.payloadAdapter.normalize(entity, plan.payload) : plan.payload;
     if (plan.operation === 'create') { const data = repository.create(entity, payload as never); return repository.get(entity, data.id) ? this.planSuccess(entity, plan.operation, 'Created successfully.', data) : { success: false, entity, operation: plan.operation, message: 'Persistence verification failed.' }; }
     if (plan.operation === 'update') { const id = this.targetId(plan, entity); if (!id) return this.targetMissing(entity, plan.operation); const data = repository.update(entity, id, payload as never); return data && repository.get(entity, id) ? this.planSuccess(entity, plan.operation, 'Updated successfully.', data) : this.targetMissing(entity, plan.operation); }
     if (plan.operation === 'delete') { const id = this.targetId(plan, entity); if (!id) return this.targetMissing(entity, plan.operation); return repository.delete(entity, id) ? this.planSuccess(entity, plan.operation, 'Deleted successfully.') : this.targetMissing(entity, plan.operation); }
