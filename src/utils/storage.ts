@@ -414,7 +414,7 @@ export const getTimelineEntries = (): TimelineEntry[] => loadData(KEYS.TIMELINE,
 export const saveTimelineEntries = (entries: TimelineEntry[]): void => saveData(KEYS.TIMELINE, entries);
 export const saveTimelineEntry = (entry: TimelineEntry): void => {
   const entries = getTimelineEntries();
-  const index = entries.findIndex((e) => e.id === entry.id || e.date === entry.date);
+  const index = entries.findIndex((e) => e.id === entry.id);
   if (index >= 0) {
     entries[index] = { ...entries[index], ...entry };
     addActivityLog('timeline', `Updated daily journey entry for ${entry.date}`);

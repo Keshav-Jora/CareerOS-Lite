@@ -22,6 +22,7 @@ const rules: EntityRule[] = [
 export class EntityRecognitionService {
   detectEntity(message: string, intent?: ActionIntent | null): EntityDetection {
     if (!message.trim()) return { entity: null, confidence: 'low' };
+    if (intent === 'create' && /\b(completed|finished|built)\b/i.test(message)) return { entity: 'journey', confidence: 'high' };
     const scores = rules.reduce<Map<ActionEntity, number>>((result, rule) => {
       if (rule.expression.test(message) && (!rule.intents || (intent ? rule.intents.includes(intent) : true))) result.set(rule.entity, (result.get(rule.entity) ?? 0) + rule.weight);
       return result;

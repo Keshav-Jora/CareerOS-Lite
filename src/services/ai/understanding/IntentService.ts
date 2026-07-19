@@ -30,6 +30,9 @@ export class IntentService {
     if (/^\s*today'?s mission\s*:/im.test(value)) {
       return { intent: 'create', confidence: 'high' };
     }
+    if (/\b(completed|finished|built)\b/i.test(value)) {
+      return { intent: 'create', confidence: 'high' };
+    }
     const scores = patterns.reduce<Map<ActionIntent, number>>((result, pattern) => {
       if (pattern.expression.test(value)) result.set(pattern.intent, (result.get(pattern.intent) ?? 0) + pattern.weight);
       return result;

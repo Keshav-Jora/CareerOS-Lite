@@ -14,12 +14,40 @@ export class ExtractionService {
     if (entity === 'goal') return { title: this.title(message), targetDate: this.dateAfter(message, /\b(?:by|target date|deadline)\s*(?:is|on|:)?\s*/i), priority: this.value(message, /\bpriority\s*[:\-]?\s*(high|medium|low)/i), notes: this.value(message, /\bnotes?\s*[:\-]?\s*([^\n]+)/i) };
     if (entity === 'skill') return { name: this.value(message, /\b(?:add|learn|skill)\s+([A-Za-z0-9.+#-]+)/i) ?? this.skills(message)[0], level: this.value(message, /\b(beginner|intermediate|advanced)\b/i) };
     if (entity === 'mission') return this.mission(message, base);
+    if (entity === 'journey') return this.journey(message);
     return { ...base, title: this.title(message) };
   }
 
   private title(message: string): string | undefined { return this.label(message, ['title']) ?? this.value(message, /\b(?:add|create|update|registered for|track)\s+(?!a new opportunity\b|new opportunity\b|opportunity\b|project\b)([^\n.]+)/i); }
   private mission(message: string, base: ExtractedPayload): ExtractedPayload {
     return { ...base, title: "Today's Mission", tasks: this.bullets(this.section(message, 'tasks') ?? message), duration: this.value(message, /\b(?:duration|estimated time)\s*:\s*([^\n]+)/i), priority: this.value(message, /\bpriority\s*:\s*(high|medium|low)/i) };
+  }
+  private journey(message: string): ExtractedPayload {
+    const title = message
+      .replace(/^\s*(?:i\s+)?(?:completed|finished|built)\s+/i, '')
+      .replace(/[.!]+$/, '')
+      .replace(/\s+(?:today|yesterday)$/i, '')
+      .replace(/\s+certification$/i, '')
+      .trim();
+    const journeyType = /\b(certification|certificate)\b/i.test(message)
+      ? 'Certification'
+      : /\b(internship|fellowship|job)\b/i.test(message)
+        ? 'Internship'
+        : 'Project';
+    const date = this.dateAfter(message, /\b(?:on|completed|finished|built)\s*/i) ?? this.normalizeDate('today');
+    return {
+      title: title || 'Career milestone',
+      journeyType,
+      status: 'Completed',
+      date,
+      certificates: journeyType === 'Certification' ? [title] : [],
+      built: journeyType === 'Project' ? title : '',
+      achievements: journeyType === 'Internship' ? `Completed ${title}.` : '',
+      learned: journeyType === 'Certification' ? `Completed ${title}.` : '',
+      applications: [],
+      codingPractice: '',
+      isMajorMilestone: true,
+    };
   }
   private opportunity(message: string, base: ExtractedPayload): ExtractedPayload {
     const fields = this.sections(message);
