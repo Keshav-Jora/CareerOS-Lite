@@ -25,6 +25,10 @@ export class EntityRecognitionService {
       const result = { entity: null, confidence: 'low' } as const;
       return result;
     }
+    if (/\b(?:completed|finished|done)\s+today'?s mission\b/i.test(message)) {
+      const result: EntityDetection = { entity: 'mission', confidence: 'high' };
+      return result;
+    }
     if (/\b(?:my goal is|i want (?:a|an|to become|to work at)|i aim to|my dream is|help me (?:track|get)|track my .*goal)\b/i.test(message)) {
       const result: EntityDetection = { entity: 'goal', confidence: 'high' };
       return result;

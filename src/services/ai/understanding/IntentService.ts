@@ -35,6 +35,10 @@ export class IntentService {
       const result: IntentDetection = { intent: 'create', confidence: 'high' };
       return result;
     }
+    if (/\b(?:i )?(?:completed|finished|done)\s+today'?s mission\b/i.test(value)) {
+      const result: IntentDetection = { intent: 'complete', confidence: 'high' };
+      return result;
+    }
     if (/\b(?:today i need to|i need to do .*today|today'?s tasks? are|help me plan today)\b/i.test(value)) {
       const result: IntentDetection = { intent: 'create', confidence: 'high' };
       return result;
