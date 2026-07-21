@@ -469,6 +469,14 @@ export const updateDailyProgress = (progress: DailyProgress): void => {
   saveDailyProgressList(list);
   addActivityLog('progress', `Logged today's productivity progress`, `DSA: ${progress.dsaQuestions} q, Coding: ${progress.codingHours} hrs`);
 };
+export const deleteDailyProgress = (date: string): boolean => {
+  const list = getDailyProgress();
+  const next = list.filter((progress) => progress.date !== date);
+  if (next.length === list.length) return false;
+  saveDailyProgressList(next);
+  addActivityLog('progress', `Deleted productivity progress for ${date}`, 'Removed daily progress entry');
+  return true;
+};
 
 // --- CERTIFICATES CRUD ---
 export const getCertificates = (): Certificate[] => loadData(KEYS.CERTIFICATES, []);

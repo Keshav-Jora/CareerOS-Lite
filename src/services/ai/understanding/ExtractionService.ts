@@ -17,10 +17,12 @@ export class ExtractionService {
     let result: ExtractedPayload;
     if (entity === 'opportunity') result = this.opportunity(message, base, _intent);
     else if (entity === 'project') result = { ...base, title: this.title(message), description: this.value(message, /\bdescription\s*[:\-]?\s*([^\n]+)/i), technologies: this.skills(message), status: this.status(message), repository: this.links(message).find((link) => /github\.com/i.test(link)), demo: this.links(message).find((link) => !/github\.com/i.test(link)) };
-    else if (entity === 'goal') result = { title: this.goalTitle(message), targetDate: this.dateAfter(message, /\b(?:by|target date|deadline)\s*(?:is|on|:)?\s*/i), priority: this.value(message, /\bpriority\s*[:\-]?\s*(high|medium|low)/i), notes: this.value(message, /\bnotes?\s*[:\-]?\s*([^\n]+)/i) };
+    else if (entity === 'goal') result = { ...this.goalRename(message), title: this.goalTitle(message), targetDate: this.dateAfter(message, /\b(?:by|target date|deadline)\s*(?:is|on|:)?\s*/i), priority: this.value(message, /\bpriority\s*[:\-]?\s*(high|medium|low)/i), notes: this.value(message, /\bnotes?\s*[:\-]?\s*([^\n]+)/i) };
     else if (entity === 'skill') result = { name: this.value(message, /\b(?:add|learn|skill)\s+([A-Za-z0-9.+#-]+)/i) ?? this.skills(message)[0], level: this.value(message, /\b(beginner|intermediate|advanced)\b/i) };
     else if (entity === 'mission') result = this.parsedMission(message, base);
     else if (entity === 'journey') result = this.journey(message);
+    else if (entity === 'progress') result = this.progress(message);
+    else if (entity === 'note') result = { ...base, title: this.noteTitle(message) };
     else result = { ...base, title: this.title(message) };
     logOpportunityDebug('ExtractionService', 'src/services/ai/understanding/ExtractionService.ts', 'extract', { message, intent: _intent, entity }, result);
     return result;
@@ -38,6 +40,8 @@ export class ExtractionService {
       .filter((line) => line && !/^today'?s mission\b|^tasks\b|^(?:duration|estimated time|priority)\s*:/i.test(line));
   }
   private goalTitle(message: string): string | undefined {
+    const rename = this.goalRename(message);
+    if (typeof rename.title === 'string') return rename.title;
     const labelled = this.label(message, ['title']);
     if (labelled) return labelled;
     const natural = this.value(message, /\b(?:my goal is|i want|i aim to|my dream is|help me get)\s+([^\n.]+)/i);
@@ -45,6 +49,31 @@ export class ExtractionService {
     const inline = this.value(message, /\b(?:create|add|update|modify|change|delete|remove|cancel)\s+(?:a\s+)?goal\s*[:\-]?\s*([^\n]+)/i);
     if (inline && !/^goal$/i.test(inline)) return inline;
     return message.split(/\r?\n/).map((line) => line.trim()).find((line) => line && !/^create\s+(?:a\s+)?goal\b/i.test(line));
+  }
+  private goalRename(message: string): ExtractedPayload {
+    const match = message.match(/\brename\s+(?:the\s+)?(?:goal\s+)?(.+?)\s+(?:to|as)\s+(.+?)\s*[.!]?\s*$/i);
+    return match ? { previousTitle: match[1].trim(), title: match[2].trim() } : {};
+  }
+  private noteTitle(message: string): string | undefined {
+    const labelled = this.label(message, ['title']);
+    if (labelled) return labelled;
+    const match = message.match(/\b(?:delete|remove|update|edit)\s+(?:the\s+)?note\s+(?!$)(.+?)\s*[.!]?\s*$/i);
+    return match?.[1]?.trim();
+  }
+  private progress(message: string): ExtractedPayload {
+    const numberAfter = (expression: RegExp): number | undefined => {
+      const value = message.match(expression)?.[1];
+      return value === undefined ? undefined : Number(value);
+    };
+    return {
+      dsaQuestions: numberAfter(/\b(\d+)\s+(?:DSA\s+)?questions?\b/i),
+      codingHours: numberAfter(/\b(\d+(?:\.\d+)?)\s*(?:hours?|hrs?)\s+(?:of\s+)?coding\b/i),
+      webDevHours: numberAfter(/\b(\d+(?:\.\d+)?)\s*(?:hours?|hrs?)\s+(?:of\s+)?(?:web\s*dev|web development)\b/i),
+      pythonHours: numberAfter(/\b(\d+(?:\.\d+)?)\s*(?:hours?|hrs?)\s+(?:of\s+)?python\b/i),
+      applicationsCount: numberAfter(/\b(\d+)\s+applications?\b/i),
+      readingMinutes: numberAfter(/\b(\d+)\s+minutes?\s+(?:of\s+)?reading\b/i),
+      projectsHours: numberAfter(/\b(\d+(?:\.\d+)?)\s*(?:hours?|hrs?)\s+(?:of\s+)?projects?\b/i),
+    };
   }
   private parsedMission(message: string, base: ExtractedPayload): ExtractedPayload {
     const lines = message.split(/\r?\n/).map((line) => line.trim());

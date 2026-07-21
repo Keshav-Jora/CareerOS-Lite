@@ -1,7 +1,7 @@
 import type { ActionIntent, IntentConfidence } from './IntentService';
 import { logOpportunityDebug } from '../../../utils/opportunityDebug';
 
-export type ActionEntity = 'opportunity' | 'journey' | 'project' | 'goal' | 'mission' | 'learning' | 'skill' | 'note' | 'certification';
+export type ActionEntity = 'opportunity' | 'journey' | 'project' | 'goal' | 'mission' | 'learning' | 'skill' | 'note' | 'certification' | 'progress';
 export interface EntityDetection { entity: ActionEntity | null; confidence: IntentConfidence; }
 
 interface EntityRule { entity: ActionEntity; weight: number; expression: RegExp; intents?: ActionIntent[]; }
@@ -12,6 +12,7 @@ const rules: EntityRule[] = [
   { entity: 'project', weight: 3, expression: /\b(project|portfolio|repository|repo)\b/i },
   { entity: 'goal', weight: 3, expression: /\b(goal|objective|target)\b/i },
   { entity: 'mission', weight: 3, expression: /\b(mission|today'?s focus|daily focus)\b/i },
+  { entity: 'progress', weight: 3, expression: /\b(today'?s\s+)?(?:daily\s+)?progress\b|\bpractice\b/i },
   { entity: 'learning', weight: 3, expression: /\b(learning|course|study|roadmap|lesson)\b/i },
   { entity: 'skill', weight: 3, expression: /\b(skill|skills|technology|tech stack)\b/i },
   { entity: 'note', weight: 3, expression: /\b(note|notes|memo|write down)\b/i },
@@ -28,6 +29,11 @@ export class EntityRecognitionService {
       return result;
     }
     if (/\b(?:completed|finished|done)\s+today'?s mission\b/i.test(message)) {
+      const result: EntityDetection = { entity: 'mission', confidence: 'high' };
+      logOpportunityDebug('EntityRecognitionService', 'src/services/ai/understanding/EntityRecognitionService.ts', 'detectEntity', { message, intent }, result);
+      return result;
+    }
+    if (intent === 'complete' && /\b(?:mark|complete|finish)\s+(?:the\s+)?(?:resume|task)\b/i.test(message)) {
       const result: EntityDetection = { entity: 'mission', confidence: 'high' };
       logOpportunityDebug('EntityRecognitionService', 'src/services/ai/understanding/EntityRecognitionService.ts', 'detectEntity', { message, intent }, result);
       return result;

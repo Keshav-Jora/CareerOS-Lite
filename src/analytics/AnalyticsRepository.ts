@@ -1,5 +1,5 @@
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
-import { getFirebaseFirestore } from '../services/auth/FirebaseConfig';
+import { collection, doc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { getFirebaseApp, getFirebaseFirestore } from '../services/auth/FirebaseConfig';
 import { AnalyticsConfig } from './AnalyticsConfig';
 import type { AnalyticsEventDocument } from './EventTypes';
 
@@ -16,17 +16,32 @@ export class AnalyticsRepository {
         if (AnalyticsConfig.isDevelopment) console.error('[Analytics] Firestore write not attempted: browser is offline.');
         return;
       }
-      if (AnalyticsConfig.isDevelopment) console.info('[Analytics] attempting Firestore write', { collection: 'analytics_events', event: event.event });
       // Firestore rejects undefined optional fields, including metadata on events without metadata.
       const document = Object.fromEntries(Object.entries({
         ...event,
         timestamp: serverTimestamp(),
       }).filter(([, value]) => value !== undefined));
-      void addDoc(collection(firestore, 'analytics_events'), document).then((savedDocument) => {
-        if (AnalyticsConfig.isDevelopment) console.info('[Analytics] Firestore write succeeded', { collection: 'analytics_events', documentId: savedDocument.id, event: event.event });
+      const events = collection(firestore, 'analytics_events');
+      const eventReference = doc(events);
+      if (AnalyticsConfig.isDevelopment) console.info(`[Analytics ${new Date().toISOString()}] before analytics event write`, {
+        firestoreInstance: firestore.app.name,
+        projectId: getFirebaseApp()?.options.projectId,
+        database: '(default)',
+        collectionPath: events.path,
+        payload: document,
+      });
+      // setDoc on a generated ID makes transport retries idempotent; addDoc uses a create-only precondition.
+      void setDoc(eventReference, document).then(() => {
+        if (AnalyticsConfig.isDevelopment) console.info(`[Analytics ${new Date().toISOString()}] analytics event write resolved`, { documentPath: eventReference.path, documentId: eventReference.id, event: event.event, projectId: getFirebaseApp()?.options.projectId });
       }).catch((error: unknown) => {
-        // Keep analytics non-blocking, but never hide the provider error while debugging.
-        console.error('[Analytics] Firestore write failed', error);
+        const firebaseError = error as { code?: unknown; message?: unknown };
+        console.error(`[Analytics ${new Date().toISOString()}] analytics event write rejected`, {
+          code: firebaseError.code,
+          message: firebaseError.message,
+          collectionPath: events.path,
+          projectId: getFirebaseApp()?.options.projectId,
+          fullError: error,
+        });
       });
     } catch (error) {
       console.error('[Analytics] Firestore write setup failed', error);

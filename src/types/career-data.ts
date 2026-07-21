@@ -7,7 +7,7 @@ export interface CareerGoal { id: string; title: string; status: 'active' | 'com
 export interface MissionTask { id: string; label: string; completed: boolean; }
 export interface CareerMission { id: string; title: string; status: 'open' | 'completed' | 'skipped'; date: string; updatedAt: string; tasks?: MissionTask[]; duration?: string; priority?: 'High' | 'Medium' | 'Low'; }
 export interface CareerProject { id: string; title: string; description: string; status: 'idea' | 'active' | 'completed' | 'archived'; skills: string[]; links: string[]; updatedAt: string; }
-export interface NovaConversationMessage { id: string; role: 'user' | 'model'; content: string; timestamp: string; }
+export interface NovaConversationMessage { id: string; role: 'user' | 'model'; content: string; timestamp: string; provider?: string; model?: string; }
 export interface NovaConversation { id: string; title: string; createdAt: string; updatedAt: string; model: string; messages: NovaConversationMessage[]; pinned?: boolean; }
 
 /** Canonical, AI-ready snapshot. Legacy UI collections remain mirrored for compatibility. */

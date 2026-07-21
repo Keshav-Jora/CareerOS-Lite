@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { GeminiService } from '../services/ai/GeminiService';
+import { createNovaAIProvider } from '../services/ai/AIProvider';
 import { RepositoryResponseService } from '../services/ai/RepositoryResponseService';
 import { RecommendationResponseService } from '../services/ai/RecommendationResponseService';
 import { ConversationStore } from '../services/ai/ConversationStore';
+import { IntentClassifier } from '../services/ai/IntentClassifier';
 import { ActionRouter } from '../services/actions/ActionRouter';
 import { NovaUnderstandingEngine } from '../services/ai/NovaUnderstandingEngine';
+import { AIRouter } from '../services/ai/AIRouter';
 import type { ActionPlan } from '../services/ai/understanding/ActionPlanBuilder';
 import type { NovaConversation, NovaConversationMessage } from '../types/career-data';
 import type { NovaChatContext, NovaChatMessage } from '../services/ai/types';
+import { AnalyticsService } from '../analytics/AnalyticsService';
 
 export type NovaAssistantState = 'idle' | 'reading' | 'thinking' | 'streaming';
 const ACTIVE_CONVERSATION_KEY = 'career_os_nova_active_conversation';
@@ -17,6 +20,8 @@ const toStoredMessage = (message: NovaChatMessage): NovaConversationMessage => (
   role: message.role,
   content: message.text,
   timestamp: message.timestamp.toISOString(),
+  provider: message.provider,
+  model: message.model,
 });
 
 const toChatMessage = (message: NovaConversationMessage): NovaChatMessage => ({
@@ -24,6 +29,8 @@ const toChatMessage = (message: NovaConversationMessage): NovaChatMessage => ({
   role: message.role,
   text: message.content,
   timestamp: new Date(message.timestamp),
+  provider: message.provider,
+  model: message.model,
 });
 
 function welcomeMessage(userName: string): NovaChatMessage {
@@ -45,9 +52,11 @@ export function useNovaChat(context: NovaChatContext, onActionExecuted?: () => v
   const [inputText, setInputText] = useState('');
   const [assistantState, setAssistantState] = useState<NovaAssistantState>('idle');
   const isRequestInFlight = useRef(false);
-  const service = useRef(new GeminiService());
+  const service = useRef(createNovaAIProvider());
   const actionRouter = useRef(new ActionRouter());
   const understandingEngine = useRef(new NovaUnderstandingEngine());
+  const intentClassifier = useRef(new IntentClassifier());
+  const aiRouter = useRef(new AIRouter());
   const repositoryResponses = useRef(new RepositoryResponseService());
   const recommendationResponses = useRef(new RecommendationResponseService());
   const pendingAction = useRef<{ plan: ActionPlan; expiresAt: number } | null>(null);
@@ -143,6 +152,8 @@ export function useNovaChat(context: NovaChatContext, onActionExecuted?: () => v
     setMessages([...history, userMessage]);
     setInputText('');
     setAssistantState('reading');
+    const requestStartedAt = performance.now();
+    AnalyticsService.track({ event: 'chat_started', feature: 'nova_chat' });
 
     let responseId: string | undefined;
     try {
@@ -170,7 +181,11 @@ export function useNovaChat(context: NovaChatContext, onActionExecuted?: () => v
         return;
       }
 
-      const plan = understandingEngine.current.understand(trimmedMessage);
+      const classified = await intentClassifier.current.classify(trimmedMessage, service.current, context);
+      service.current.setProviderOrder(aiRouter.current.route(classified.intent).providerOrder);
+      const plan = classified.intent === 'UNKNOWN'
+        ? understandingEngine.current.understand(trimmedMessage)
+        : understandingEngine.current.understandClassified(trimmedMessage, classified);
       const isMutation = ['create', 'update', 'delete', 'archive', 'restore', 'complete'].includes(plan.operation);
       if (isMutation) {
         const actionResult = actionRouter.current.routePlan(plan);
@@ -191,17 +206,29 @@ export function useNovaChat(context: NovaChatContext, onActionExecuted?: () => v
       setMessages((current) => [...current, { id: responseId!, role: 'model', text: '', timestamp: new Date(), isStreaming: true }]);
       setAssistantState('streaming');
       let responseText = '';
-      for await (const chunk of service.current.streamChat({ message: trimmedMessage, history, context })) {
-        responseText += chunk;
-        setMessages((current) => current.map((entry) => entry.id === responseId ? { ...entry, text: responseText } : entry));
+      let responseProvider: string | undefined;
+      let responseModel: string | undefined;
+      for await (const response of service.current.streamResponse({ message: trimmedMessage, history, context })) {
+        responseText += response.text;
+        responseProvider = response.provider;
+        responseModel = response.model;
+        setMessages((current) => current.map((entry) => entry.id === responseId
+          ? { ...entry, text: responseText, provider: response.provider, model: response.model }
+          : entry));
       }
       setMessages((current) => {
         const next = current.map((entry) => entry.id === responseId ? { ...entry, isStreaming: false } : entry);
         persistMessages(conversationId, next);
         return next;
       });
+      const responseTime = Math.round(performance.now() - requestStartedAt);
+      AnalyticsService.track({ event: 'chat_completed', feature: 'nova_chat', provider: responseProvider, model: responseModel, responseTime });
+      if (responseProvider) AnalyticsService.track({ event: 'provider_used', feature: 'nova_chat', provider: responseProvider, model: responseModel, responseTime });
     } catch (error) {
       console.error('Nova Gemini request failed.', error);
+      AnalyticsService.track({ event: 'ai_error', feature: 'nova_chat' });
+      AnalyticsService.track({ event: 'provider_failed', feature: 'nova_chat' });
+      AnalyticsService.track({ event: 'fallback_used', feature: 'nova_chat' });
       const fallback = repositoryResponses.current.fallback();
       if (responseId) {
         setMessages((current) => {

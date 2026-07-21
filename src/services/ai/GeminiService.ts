@@ -1,9 +1,11 @@
 import { GoogleGenAI } from '@google/genai';
 import { CareerIntelligenceEngine } from '../../ai/intelligence';
+import { DecisionEngine } from '../decision/DecisionEngine';
 import { PromptBuilder } from './PromptBuilder';
 import { ResponseParser } from './ResponseParser';
 import type { NovaChatRequest } from './types';
 import { GeminiServiceError } from './types';
+import type { AIProvider } from './AIProvider';
 
 interface GeminiServiceOptions {
   model?: string;
@@ -12,16 +14,20 @@ interface GeminiServiceOptions {
 }
 
 /** Provider boundary for Nova's Gemini text and streaming requests. */
-export class GeminiService {
+export class GeminiService implements AIProvider {
+  readonly providerName = 'Gemini';
   private readonly model: string;
+  modelName: string;
   private readonly timeoutMs: number;
   private readonly maxRetries: number;
   private readonly promptBuilder = new PromptBuilder();
   private readonly responseParser = new ResponseParser();
   private readonly intelligenceEngine = new CareerIntelligenceEngine();
+  private readonly decisionEngine = new DecisionEngine();
 
   constructor(options: GeminiServiceOptions = {}) {
     this.model = options.model ?? 'gemini-3.5-flash';
+    this.modelName = this.model;
     this.timeoutMs = options.timeoutMs ?? 30_000;
     this.maxRetries = options.maxRetries ?? 1;
   }
@@ -29,6 +35,7 @@ export class GeminiService {
   async *streamChat(request: NovaChatRequest): AsyncGenerator<string, void, undefined> {
     const client = this.createClient();
     const recommendation = this.intelligenceEngine.generate();
+    const decisions = this.decisionEngine.analyze();
     const input = this.promptBuilder.buildInteractionInput(request.history, request.message, request.context);
     let lastError: GeminiServiceError | undefined;
 
@@ -39,18 +46,32 @@ export class GeminiService {
         const responseStream = await this.withTimeout(client.interactions.create({
           model: this.model,
           input,
-          system_instruction: this.promptBuilder.buildSystemInstruction(recommendation),
+          system_instruction: this.promptBuilder.buildSystemInstruction(recommendation, decisions),
           stream: true,
         }));
 
         for await (const event of responseStream) {
+          // Diagnostic trace: preserve the complete SDK event before Nova filters it.
+          // This is intentionally logged at the provider boundary so browser DevTools
+          // can distinguish text deltas from lifecycle, safety, and error events.
+          console.debug('[Nova Gemini stream event]', event.event_type, event);
+          // Interaction errors are SSE events, not thrown SDK errors; surface them so
+          // ProviderManager can retry the next configured provider.
+          if (event.event_type === 'error') {
+            const message = event.error?.message ?? 'Gemini returned a stream error.';
+            throw new GeminiServiceError('provider-error', message, /rate.?limit|quota|too_many_requests|temporar|unavailable/i.test(message));
+          }
+          if (event.event_type === 'interaction.created' && event.interaction.model) {
+            this.modelName = event.interaction.model;
+          }
           if (event.event_type !== 'step.delta' || event.delta.type !== 'text') continue;
 
-          const parsed = this.responseParser.parseText(event.delta.text);
-          if (parsed.success) {
-            receivedText = true;
-            yield parsed.text;
-          }
+          const rawText = event.delta.text;
+          this.responseParser.parseText(rawText);
+          if (!rawText) continue;
+          receivedText = true;
+          // Preserve delta whitespace, including whitespace-only chunks, for streamed Markdown.
+          yield rawText;
         }
 
         if (!receivedText) {

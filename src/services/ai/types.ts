@@ -8,6 +8,8 @@ export interface NovaChatMessage {
   text: string;
   timestamp: Date;
   isStreaming?: boolean;
+  provider?: string;
+  model?: string;
 }
 
 export interface NovaChatContext {

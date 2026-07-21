@@ -1,5 +1,7 @@
 import type { NovaChatContext, NovaChatMessage } from './types';
 import type { CareerRecommendation } from '../../ai/intelligence';
+import type { DecisionRecommendation } from '../decision/DecisionEngine';
+import { dataService } from '../dataService';
 
 /** Builds provider-neutral Nova prompts and conversation turns. */
 export class PromptBuilder {
@@ -25,6 +27,7 @@ Response quality:
 - Explain from the student's apparent level, starting with fundamentals and adding advanced detail only when useful.
 - Use a simple real-world analogy when it genuinely clarifies a difficult concept.
 - Make recommendations actionable, specific, and realistic.
+- For career coaching, start with the conclusion, then explain the evidence, strengths, gaps, trade-offs, and prioritized actions. Be candid but constructive; do not reduce coaching to a database summary.
 
 Accuracy:
 - Never invent user information, achievements, deadlines, or opportunities.
@@ -37,10 +40,12 @@ For educational answers, end with one helpful follow-up question only when it mo
 Always prioritize the student's next practical step.`;
 
   /** Adds the current deterministic career intelligence snapshot to Nova's hidden instructions. */
-  buildSystemInstruction(recommendation: CareerRecommendation): string {
+  buildSystemInstruction(recommendation: CareerRecommendation, decisions: DecisionRecommendation[] = []): string {
     return `${PromptBuilder.systemInstruction}
 
-${this.buildCareerIntelligenceContext(recommendation)}`;
+${this.buildCareerIntelligenceContext(recommendation)}
+
+${this.buildDecisionContext(decisions)}`;
   }
 
   buildConversation(history: NovaChatMessage[], message: string, context: NovaChatContext) {
@@ -71,18 +76,34 @@ ${this.buildCareerIntelligenceContext(recommendation)}`;
   }
 
   private buildContextMessage(context: NovaChatContext): string {
+    const snapshot = dataService.repository.getSnapshot();
     const activeOpportunities = context.opportunities.filter(
       (opportunity) => !['Completed', 'Selected', 'Rejected'].includes(opportunity.status),
     ).length;
     const codingHours = context.progress.reduce((total, entry) => total + entry.codingHours, 0);
 
+    const upcomingDeadlines = snapshot.opportunities.filter((item) => item.deadline).sort((left, right) => left.deadline.localeCompare(right.deadline)).slice(0, 3).map((item) => `${item.title} (${item.organization || 'Unknown'}, ${item.deadline})`);
+    const goals = snapshot.goals.filter((goal) => goal.status === 'active').map((goal) => `${goal.title} [${goal.priority}]`);
+    const skills = snapshot.skills.map((skill) => `${skill.name} (${skill.level})`);
+    const projects = snapshot.projects.map((project) => `${project.title} (${project.status})`);
+    const recentJourney = snapshot.journey.slice(0, 3).map((entry) => `${entry.date}: ${entry.achievements || entry.built || entry.learned || 'milestone'}`);
+    const recentNotes = snapshot.notes.slice(0, 3).map((note) => note.title);
     return `CareerOS context for ${context.userName}:
 - Active opportunities: ${activeOpportunities}
 - Total tracked opportunities: ${context.opportunities.length}
 - Logged coding hours: ${codingHours.toFixed(1)}
 - Journey entries: ${context.timeline.length}
 
-Use this context only when it is relevant. Ask a clarifying question instead of assuming missing details.`;
+Structured career memory:
+- Active goals: ${goals.join(' | ') || 'None'}
+- Upcoming deadlines: ${upcomingDeadlines.join(' | ') || 'None'}
+- Skills: ${skills.join(' | ') || 'None recorded'}
+- Projects: ${projects.join(' | ') || 'None recorded'}
+- Recent journey: ${recentJourney.join(' | ') || 'None recorded'}
+- Recent notes: ${recentNotes.join(' | ') || 'None recorded'}
+- Practice records: ${dataService.repository.getProgress().slice(-7).map((entry) => `${entry.date}: ${entry.codingHours}h coding, ${entry.dsaQuestions} DSA`).join(' | ') || 'None recorded'}
+
+For career reviews, mentoring, planning, priorities, and gap analysis: reason from this data, identify strengths and weaknesses, explain why, and give a prioritized next step. Do not return a raw repository summary. Use this context only when relevant and ask a clarifying question only when essential.`;
   }
 
   private buildCareerIntelligenceContext(recommendation: CareerRecommendation): string {
@@ -98,6 +119,11 @@ Use this context only when it is relevant. Ask a clarifying question instead of 
 - Next Best Action: ${recommendation.nextBestAction.title} — ${recommendation.nextBestAction.description}
 
 Use this intelligence to personalize relevant guidance. Do not claim the student completed actions that are only recommended.`;
+  }
+
+  private buildDecisionContext(decisions: DecisionRecommendation[]): string {
+    if (!decisions.length) return 'Decision Engine: no deterministic recommendations are available yet.';
+    return `Decision Engine recommendations (private structured context; explain these naturally and do not invent additional recommendations):\n${decisions.slice(0, 5).map((item) => `- [${item.priority}/100] ${item.title}: ${item.reason}`).join('\n')}`;
   }
 
   private formatItems(items: string[]): string {

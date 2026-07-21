@@ -18,7 +18,7 @@ const patterns: IntentPattern[] = [
   { intent: 'show', weight: 3, expression: /\b(show|list|display|view)\b/i },
   { intent: 'search', weight: 2, expression: /\b(search|find|look for)\b/i },
   { intent: 'prioritize', weight: 2, expression: /\b(prioritize|priority|focus on)\b/i },
-  { intent: 'update', weight: 2, expression: /\b(update|change(?:d)?|move|set|edit|modify)\b/i },
+  { intent: 'update', weight: 2, expression: /\b(update|change(?:d)?|move|set|edit|modify|rename|log)\b/i },
   { intent: 'create', weight: 2, expression: /\b(add|create|new|register|track|save)\b/i },
 ];
 
@@ -63,12 +63,17 @@ export class IntentService {
       logOpportunityDebug('IntentService', 'src/services/ai/understanding/IntentService.ts', 'detect', message, result);
       return result;
     }
+    if (/\b(?:mark|complete|finish)\s+(?:the\s+)?(?:resume|task)\b.*\b(?:complete(?:d)?|done)\b/i.test(value)) {
+      const result: IntentDetection = { intent: 'complete', confidence: 'high' };
+      logOpportunityDebug('IntentService', 'src/services/ai/understanding/IntentService.ts', 'detect', message, result);
+      return result;
+    }
     if (/\b(completed|finished|built|solved)\b/i.test(value)) {
       const result: IntentDetection = { intent: 'create', confidence: 'high' };
       logOpportunityDebug('IntentService', 'src/services/ai/understanding/IntentService.ts', 'detect', message, result);
       return result;
     }
-    if (/^\s*(update|change|changed|edit|set|modify|move)\b/i.test(value)) {
+    if (/^\s*(update|change|changed|edit|set|modify|move|rename)\b/i.test(value)) {
       const result: IntentDetection = { intent: 'update', confidence: 'high' };
       logOpportunityDebug('IntentService', 'src/services/ai/understanding/IntentService.ts', 'detect', message, result);
       return result;

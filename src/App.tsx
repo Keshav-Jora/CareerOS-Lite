@@ -126,8 +126,8 @@ export default function App() {
     setAuthBusy(true);
     setAuthError(null);
     try {
-      await new AuthService().signOut();
       AnalyticsService.track({ event: 'user_logout', feature: 'authentication' });
+      await new AuthService().signOut();
       isClearingAccount.current = true;
       cloudSync.stop();
       setSessionUser(null);

@@ -85,6 +85,7 @@ export class CanonicalCareerRepository {
   deleteJourney(id: string): void { storage.deleteTimelineEntry(id); }
   getProgress(): DailyProgress[] { return storage.getDailyProgress(); }
   saveProgress(value: DailyProgress): void { storage.updateDailyProgress(value); }
+  deleteProgress(date: string): boolean { return storage.deleteDailyProgress(date); }
   getCertifications(): Certificate[] { return storage.getCertificates(); }
   saveCertification(value: Certificate): void { storage.saveCertificate(value); }
   deleteCertification(id: string): void { storage.deleteCertificate(id); }

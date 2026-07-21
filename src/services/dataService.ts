@@ -72,6 +72,11 @@ export const dataService = {
     this.repository.saveProgress(progress);
     notifyDataChanged();
   },
+  deleteDailyProgress(date: string): boolean {
+    const deleted = this.repository.deleteProgress(date);
+    if (deleted) notifyDataChanged();
+    return deleted;
+  },
 
   // Certificates
   saveCertificate(cert: Certificate): void {

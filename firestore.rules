@@ -1,0 +1,48 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // Set this custom claim with the Firebase Admin SDK; never rely on a client-side email list.
+    function isAdmin() {
+      return signedIn() && request.auth.token.admin == true;
+    }
+
+    match /careerData/{userId} {
+      allow read, write: if signedIn() && request.auth.uid == userId;
+    }
+
+    match /analytics_events/{eventId} {
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid
+        && validAnalyticsEvent();
+      allow read: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    function validAnalyticsEvent() {
+      let data = request.resource.data;
+      return data.keys().hasOnly([
+          'event', 'userId', 'sessionId', 'timestamp', 'feature', 'provider', 'model', 'responseTime', 'metadata'
+        ])
+        && data.keys().hasAll(['event', 'userId', 'sessionId', 'timestamp'])
+        && data.event in [
+          'user_signup', 'user_login', 'user_logout', 'app_open', 'session_start', 'session_end',
+          'chat_started', 'chat_completed', 'provider_used', 'provider_failed', 'fallback_used',
+          'dashboard_opened', 'roadmap_generated', 'recommendation_opened', 'settings_opened',
+          'feedback_positive', 'feedback_negative', 'ai_error', 'firebase_error', 'app_error'
+        ]
+        && data.userId is string
+        && data.sessionId is string
+        && data.timestamp is timestamp
+        && (!data.keys().hasAny(['feature']) || data.feature is string)
+        && (!data.keys().hasAny(['provider']) || data.provider is string)
+        && (!data.keys().hasAny(['model']) || data.model is string)
+        && (!data.keys().hasAny(['responseTime']) || (data.responseTime is number && data.responseTime >= 0))
+        && (!data.keys().hasAny(['metadata']) || data.metadata is map);
+    }
+  }
+}

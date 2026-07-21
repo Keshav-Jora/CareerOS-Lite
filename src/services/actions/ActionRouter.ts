@@ -23,10 +23,13 @@ export class ActionRouter {
   private readonly payloadAdapter = new EntityPayloadAdapter();
   routePlan(plan: ActionPlan): ActionPlanExecutionResult {
     if (plan.entity === 'opportunity') logOpportunityDebug('ActionRouter', 'src/services/actions/ActionRouter.ts', 'routePlan', plan, undefined);
-    if (!plan.validation.valid) return { success: false, entity: plan.entity, operation: plan.operation, message: 'Action plan validation failed.', reason: 'validation-failed', issues: plan.validation.issues };
+    if (!plan.validation.valid) return { success: false, entity: plan.entity === 'progress' ? null : plan.entity, operation: plan.operation, message: 'Action plan validation failed.', reason: 'validation-failed', issues: plan.validation.issues };
     if (!plan.entity) return { success: false, entity: null, operation: plan.operation, message: 'No supported entity was detected.', reason: 'unsupported-operation' };
-    const repository = dataService.repository; const entity = plan.entity as CanonicalEntity;
-    if (plan.requiresConfirmation) {
+    const repository = dataService.repository;
+    if (plan.entity === 'progress') return this.routeProgress(plan);
+    const entity = plan.entity as CanonicalEntity;
+    const singleNoteDelete = plan.operation === 'delete' && entity === 'note' && repository.getAll('note').length === 1 && !this.noteTarget(plan.sourceMessage);
+    if (plan.requiresConfirmation && !singleNoteDelete) {
       const targetId = plan.operation === 'delete' ? this.targetId(plan, entity) : undefined;
       if (plan.operation === 'delete' && !targetId) return this.targetMissing(entity, plan.operation);
       return { success: false, entity, operation: plan.operation, message: 'Confirmation is required before this action can run.', reason: 'confirmation-required', data: targetId ? { id: targetId } : undefined };
@@ -53,8 +56,12 @@ export class ActionRouter {
       if (entity === 'opportunity') logOpportunityDebug('ActionRouter', 'src/services/actions/ActionRouter.ts', 'routePlan', plan, result);
       return result;
     }
-    if (plan.operation === 'update') { const id = this.targetId(plan, entity); if (!id) return this.targetMissing(entity, plan.operation); const current = repository.get<Record<string, unknown> & { id: string }>(entity, id); const data = repository.update(entity, id, payload as never); return data && repository.get(entity, id) ? this.planSuccess(entity, plan.operation, this.updatedMessage(entity, current ?? {}, data), data) : this.targetMissing(entity, plan.operation); }
+    if (plan.operation === 'update') { const renamedGoal = entity === 'goal' && typeof plan.payload.previousTitle === 'string' && typeof plan.payload.title === 'string'; const id = renamedGoal ? this.targetIdForTitle(entity, plan.payload.previousTitle) : this.targetId(plan, entity); if (!id) return this.targetMissing(entity, plan.operation); const current = repository.get<Record<string, unknown> & { id: string }>(entity, id); const data = repository.update(entity, id, payload as never); return data && repository.get(entity, id) ? this.planSuccess(entity, plan.operation, this.updatedMessage(entity, current ?? {}, data), data) : this.targetMissing(entity, plan.operation); }
     if (plan.operation === 'delete') { const id = this.targetId(plan, entity); if (!id) return this.targetMissing(entity, plan.operation); const current = repository.get<Record<string, unknown> & { id: string }>(entity, id); return repository.delete(entity, id) ? this.planSuccess(entity, plan.operation, this.deletedMessage(entity, current ?? {}, repository.getAll(entity).length)) : this.targetMissing(entity, plan.operation); }
+    if (entity === 'mission' && plan.operation === 'complete') {
+      const taskTarget = this.missionTaskTarget(plan.sourceMessage);
+      if (taskTarget) return this.completeMissionTask(taskTarget, plan.operation);
+    }
     if (plan.operation === 'archive' || plan.operation === 'restore' || plan.operation === 'complete') { const id = this.targetId(plan, entity); if (!id) return this.targetMissing(entity, plan.operation); const status = plan.operation === 'archive' ? 'archived' : plan.operation === 'restore' ? 'active' : 'completed'; const patch = entity === 'mission' && plan.operation === 'complete' ? { status, tasks: (repository.get<Record<string, unknown> & { id: string }>(entity, id)?.tasks as Array<Record<string, unknown>> | undefined)?.map((task) => ({ ...task, completed: true })) } : { status }; const data = repository.update(entity, id, patch as never); const completedMission = data as (Record<string, unknown> & { id: string }) | null; if (completedMission && entity === 'mission' && plan.operation === 'complete') repository.create('journey', { id: `journey-mission-${id}-${Date.now()}`, date: new Date().toISOString().slice(0, 10), learned: '', built: '', applications: [], certificates: [], codingPractice: '', achievements: `Completed ${typeof completedMission.title === 'string' ? completedMission.title : 'today’s mission'}.`, isMajorMilestone: false } as never); return data ? this.planSuccess(entity, plan.operation, entity === 'mission' && plan.operation === 'complete' ? "Today's mission completed." : `${plan.operation} successfully.`, data) : this.targetMissing(entity, plan.operation); }
     const query = typeof plan.payload.query === 'string' ? plan.payload.query : plan.sourceMessage;
     const data = plan.intent === 'search' ? repository.search(entity, query) : repository.getAll(entity);
@@ -144,14 +151,14 @@ export class ActionRouter {
 
   private targetId(plan: ActionPlan, entity: CanonicalEntity): string | undefined {
     if (typeof plan.payload.id === 'string') return plan.payload.id;
-    const title = typeof plan.payload.title === 'string' ? plan.payload.title.trim().toLowerCase() : '';
+    const title = typeof plan.payload.title === 'string' ? this.normalizeTitle(plan.payload.title) : '';
     const records = dataService.repository.getAll<Record<string, unknown> & { id: string }>(entity);
     // A deadline-only update is unambiguous when there is one opportunity. Keep
     // ambiguous commands safe by requiring a title whenever more than one exists.
-    if (!title) return entity === 'opportunity' && records.length === 1 ? records[0].id : undefined;
+    if (!title) return (entity === 'opportunity' || entity === 'note') && records.length === 1 ? records[0].id : undefined;
     const matches = records.filter((item) => {
       const candidate = typeof item.title === 'string' ? item.title : typeof item.name === 'string' ? item.name : '';
-      const normalized = candidate.trim().toLowerCase();
+      const normalized = this.normalizeTitle(candidate);
       return normalized === title || normalized.includes(title) || title.includes(normalized);
     });
     if (matches.length === 1) return matches[0].id;
@@ -181,6 +188,42 @@ export class ActionRouter {
     return ranked.length === 1 || (ranked.length > 1 && ranked[0].score > ranked[1].score)
       ? ranked[0]?.item.id
       : undefined;
+  }
+  private targetIdForTitle(entity: CanonicalEntity, title: unknown): string | undefined {
+    if (typeof title !== 'string') return undefined;
+    const normalized = this.normalizeTitle(title);
+    const matches = dataService.repository.getAll<Record<string, unknown> & { id: string }>(entity)
+      .filter((item) => this.normalizeTitle(typeof item.title === 'string' ? item.title : typeof item.name === 'string' ? item.name : '') === normalized);
+    return matches.length === 1 ? matches[0].id : undefined;
+  }
+  private normalizeTitle(value: string): string { return value.trim().replace(/\s+/g, ' ').toLowerCase(); }
+  private noteTarget(message: string): string | undefined { return message.match(/\b(?:delete|remove)\s+(?:the\s+)?note\s+(.+?)\s*[.!]?\s*$/i)?.[1]?.trim(); }
+  private missionTaskTarget(message: string): string | undefined { return message.match(/\b(?:mark|complete|finish)\s+(?:the\s+)?(.+?)\s+(?:as\s+)?(?:complete(?:d)?|done)\b/i)?.[1]?.trim(); }
+  private completeMissionTask(taskTarget: string, operation: ActionOperation): ActionPlanExecutionResult {
+    const today = new Date().toISOString().slice(0, 10);
+    const missions = dataService.repository.getAll<Record<string, unknown> & { id: string }>('mission');
+    const mission = missions.find((item) => item.date === today) ?? missions.find((item) => item.status === 'open' || item.status === 'active');
+    const tasks = Array.isArray(mission?.tasks) ? mission.tasks as Array<Record<string, unknown>> : [];
+    const normalizedTarget = this.normalizeTitle(taskTarget);
+    const taskIndex = tasks.findIndex((task) => this.normalizeTitle(typeof task.label === 'string' ? task.label : typeof task.title === 'string' ? task.title : typeof task.text === 'string' ? task.text : '') === normalizedTarget);
+    if (!mission || taskIndex < 0) return { success: false, entity: 'mission', operation, message: `I could not find a mission task named ${taskTarget}.`, reason: 'target-not-found' };
+    const updatedTasks = tasks.map((task, index) => index === taskIndex ? { ...task, completed: true } : task);
+    const data = dataService.repository.update('mission', mission.id, { tasks: updatedTasks } as never);
+    return data ? this.planSuccess('mission', operation, `Marked **${taskTarget}** as completed.`, data) : this.targetMissing('mission', operation);
+  }
+  private routeProgress(plan: ActionPlan): ActionPlanExecutionResult {
+    const progress = dataService.repository.getProgress();
+    const today = new Date().toISOString().slice(0, 10);
+    const current = progress.find((item) => item.date === today) ?? [...progress].sort((left, right) => right.date.localeCompare(left.date))[0];
+    if (plan.operation === 'delete') {
+      if (!current) return { success: false, entity: null, operation: plan.operation, message: 'I could not find a daily progress entry to delete.', reason: 'target-not-found' };
+      const deleted = dataService.deleteDailyProgress(current.date);
+      return deleted ? { success: true, entity: null, operation: plan.operation, message: `Deleted daily progress for ${current.date}.`, data: current } : { success: false, entity: null, operation: plan.operation, message: 'I could not delete that daily progress entry.', reason: 'target-not-found' };
+    }
+    const numeric = (field: Exclude<keyof DailyProgress, 'date'>): number => typeof plan.payload[field] === 'number' ? plan.payload[field] as number : current?.[field] ?? 0;
+    const next: DailyProgress = { date: today, dsaQuestions: numeric('dsaQuestions'), codingHours: numeric('codingHours'), webDevHours: numeric('webDevHours'), pythonHours: numeric('pythonHours'), applicationsCount: numeric('applicationsCount'), readingMinutes: numeric('readingMinutes'), projectsHours: numeric('projectsHours') };
+    dataService.updateDailyProgress(next);
+    return { success: true, entity: null, operation: plan.operation, message: "Today's daily progress was saved.", data: next };
   }
   private referenceTokens(value: string): Set<string> {
     return new Set(value.toLowerCase().match(/[a-z0-9]+/g)?.filter((token) => !new Set(['the', 'my', 'this', 'that', 'an', 'a', 'remove', 'delete', 'update', 'change', 'changed', 'deadline', 'priority']).has(token)) ?? []);
@@ -215,8 +258,8 @@ export class ActionRouter {
   }
   private updatePayload(payload: Record<string, unknown>, sourceMessage: string): Record<string, unknown> {
     return Object.fromEntries(Object.entries(payload).filter(([key, value]) => {
-      if (value === undefined || (Array.isArray(value) && value.length === 0)) return false;
-      return key !== 'title' || /(?:^|\n)\s*(?:title|role)\s*:/i.test(sourceMessage);
+      if (key === 'previousTitle' || value === undefined || (Array.isArray(value) && value.length === 0)) return false;
+      return key !== 'title' || typeof payload.previousTitle === 'string' || /(?:^|\n)\s*(?:title|role)\s*:/i.test(sourceMessage);
     }));
   }
   private createdMessage(entity: CanonicalEntity, data: Record<string, unknown>): string {
@@ -240,7 +283,13 @@ export class ActionRouter {
     if (typeof data.name === 'string') return data.name;
     return entity === 'mission' ? "Today's Mission" : entity;
   }
-  private targetMissing(entity: CanonicalEntity, operation: ActionOperation): ActionPlanExecutionResult { return { success: false, entity, operation, message: `I could not find that ${entity}. Please include its title${entity === 'opportunity' ? ' and company if there are duplicates' : ''}.`, reason: 'target-not-found' }; }
+  private targetMissing(entity: CanonicalEntity, operation: ActionOperation): ActionPlanExecutionResult {
+    if (entity === 'note' && operation === 'delete') {
+      const notes = dataService.repository.getAll<Record<string, unknown> & { id: string }>('note');
+      if (notes.length > 1) return { success: false, entity, operation, message: `Which note should I delete? ${notes.map((note) => `“${typeof note.title === 'string' ? note.title : 'Untitled'}”`).join(', ')}.`, reason: 'target-not-found', data: notes };
+    }
+    return { success: false, entity, operation, message: `I could not find that ${entity}. Please include its title${entity === 'opportunity' ? ' and company if there are duplicates' : ''}.`, reason: 'target-not-found' };
+  }
   private planSuccess(entity: CanonicalEntity, operation: ActionOperation, message: string, data?: unknown): ActionPlanExecutionResult { window.dispatchEvent(new Event('career-os-data-changed')); return { success: true, entity, operation, message, data }; }
 }
 
