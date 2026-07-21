@@ -20,6 +20,8 @@ import {
   AlertTriangle,
   Info,
   Zap,
+  Mail,
+  Github,
 } from 'lucide-react';
 import { AppNotification } from '../types';
 
@@ -71,6 +73,10 @@ export default function Sidebar({
     { id: 'certificates', label: 'Certificates', icon: Award },
     { id: 'notes', label: 'Notes', icon: FileText },
     { id: 'settings', label: 'Settings', icon: Settings },
+  ];
+  const connectionItems = [
+    { id: 'connections-gmail', label: 'Gmail', icon: Mail },
+    { id: 'connections-github', label: 'GitHub', icon: Github },
   ];
 
   const getNotificationIcon = (type: AppNotification['type']) => {
@@ -181,6 +187,14 @@ export default function Sidebar({
                 )}
               </button>
             );
+          })}
+        </nav>
+        <nav className="mt-5 px-4 space-y-1" aria-label="Connections Navigation">
+          {!isCollapsed && <p className="px-3 pb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Connections</p>}
+          {connectionItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = currentView === item.id;
+            return <button type="button" key={item.id} id={`sidebar-nav-${item.id}`} onClick={() => onViewChange(item.id)} aria-label={item.label} aria-current={isActive ? 'page' : undefined} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${isActive ? theme === 'dark' ? 'bg-indigo-600/10 text-indigo-400 border border-indigo-500/20 shadow-sm' : 'bg-indigo-50 text-indigo-600 border border-indigo-100 shadow-sm' : theme === 'dark' ? 'text-slate-400 hover:bg-slate-800/40 hover:text-slate-100 border border-transparent' : 'text-slate-600 hover:bg-slate-100/60 hover:text-slate-900 border border-transparent'}`}><Icon aria-hidden="true" className={`h-5 w-5 shrink-0 ${isActive ? 'text-indigo-500' : 'text-slate-400'}`} />{!isCollapsed && <span className="truncate">{item.label}</span>}</button>;
           })}
         </nav>
       </div>

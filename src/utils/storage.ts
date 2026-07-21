@@ -7,6 +7,7 @@ import {
   ActivityLog,
   AppNotification,
 } from '../types';
+import type { ExternalConnection } from '../services/integrations/contracts/Connection';
 
 // Storage Keys
 const KEYS = {
@@ -18,6 +19,7 @@ const KEYS = {
   ACTIVITIES: 'career_os_activities',
   NOTIFICATIONS: 'career_os_notifications',
   THEME: 'career_os_theme',
+  CONNECTIONS: 'career_os_connections',
 };
 
 // Seed Data
@@ -327,6 +329,9 @@ export const initializeStorage = (): void => {
   if (localStorage.getItem('career_os_dashboard_tasks') === null) {
     localStorage.setItem('career_os_dashboard_tasks', JSON.stringify([]));
   }
+  if (localStorage.getItem(KEYS.CONNECTIONS) === null) {
+    localStorage.setItem(KEYS.CONNECTIONS, JSON.stringify([]));
+  }
 };
 
 // Reset all storage data to empty arrays for a fresh user account
@@ -345,6 +350,7 @@ export const resetStorageData = (): void => {
   localStorage.setItem(KEYS.NOTES, JSON.stringify([]));
   localStorage.setItem(KEYS.ACTIVITIES, JSON.stringify([]));
   localStorage.setItem(KEYS.NOTIFICATIONS, JSON.stringify([]));
+  localStorage.setItem(KEYS.CONNECTIONS, JSON.stringify([]));
   localStorage.setItem('career_os_dashboard_tasks', JSON.stringify([]));
   localStorage.setItem('career_os_opp_reminders', JSON.stringify({}));
   localStorage.setItem('career_os_user_name', 'Student');
@@ -519,6 +525,10 @@ export const deleteNote = (id: string): void => {
   const filtered = notes.filter((n) => n.id !== id);
   saveNotes(filtered);
 };
+
+// --- CONNECTION METADATA ---
+export const getConnections = (): ExternalConnection[] => loadData(KEYS.CONNECTIONS, []);
+export const saveConnections = (connections: ExternalConnection[]): void => saveData(KEYS.CONNECTIONS, connections);
 
 // --- ACTIVITY LOGS ---
 export const getActivityLogs = (): ActivityLog[] => loadData(KEYS.ACTIVITIES, []);

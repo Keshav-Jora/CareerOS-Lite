@@ -23,6 +23,8 @@ import type { ActivityLog, Certificate, DailyProgress, Note, Opportunity, Timeli
 import type { CareerMission, MissionTask } from '../types/career-data';
 import { useDashboardIntelligence } from '../hooks/useDashboardIntelligence';
 import { CareerStatisticsService } from '../services/data/CareerStatisticsService';
+import ConnectionsWidget from './ConnectionsWidget';
+import type { ExternalConnection } from '../services/integrations/contracts/Connection';
 
 interface DashboardViewProps {
   theme: 'light' | 'dark';
@@ -44,6 +46,7 @@ interface DashboardViewProps {
   dailyMission?: CareerMission;
   onSaveMission: (mission: CareerMission) => void;
   onDeleteMission: (id: string) => void;
+  connections: ExternalConnection[];
 }
 
 const quickActions = [
@@ -67,6 +70,7 @@ export default function DashboardView({
   dailyMission,
   onSaveMission,
   onDeleteMission,
+  connections,
 }: DashboardViewProps) {
   const [missionComplete, setMissionComplete] = useState(false);
   const intelligence = useDashboardIntelligence({
@@ -196,6 +200,8 @@ export default function DashboardView({
       <section className={`rounded-3xl border p-6 ${surface}`} aria-labelledby="decision-memory-title">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center"><div><div className="flex items-center gap-2 text-sm font-semibold text-fuchsia-400"><Sparkles className="h-4 w-4" aria-hidden="true" /> Decision memory</div><h2 id="decision-memory-title" className={`mt-2 font-display text-lg font-bold ${headingText}`}>{recommendation.nextBestAction.title}</h2><p className={`mt-1 text-sm ${mutedText}`}>{intelligence.latestActivity ? `Latest recorded outcome: ${intelligence.latestActivity.action}` : 'Outcome tracking begins when you log progress in your Journey.'}</p></div><button type="button" onClick={() => onNavigateToView('journey')} className={`inline-flex items-center gap-2 text-sm font-semibold ${isDark ? 'text-indigo-300 hover:text-indigo-200' : 'text-indigo-600 hover:text-indigo-700'} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400`}>Open Journey <ArrowRight className="h-4 w-4" aria-hidden="true" /></button></div>
       </section>
+
+      <ConnectionsWidget theme={theme} connections={connections} onOpen={() => onNavigateToView('connections')} />
 
       <section aria-labelledby="quick-actions-title"><div className="mb-3 flex items-center gap-2 px-1"><ListTodo className="h-4 w-4 text-indigo-400" aria-hidden="true" /><h2 id="quick-actions-title" className={`font-display text-lg font-bold ${headingText}`}>Quick actions</h2></div><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{quickActions.map((action) => { const Icon = action.icon; const onClick = action.destination === 'opportunities' ? onAddOpportunityTrigger : () => onNavigateToView(action.destination); return <motion.button type="button" whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }} key={action.label} onClick={onClick} className={`group flex items-center gap-4 rounded-2xl border p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${surface}`}><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-300 transition group-hover:bg-indigo-500/20"><Icon className="h-5 w-5" aria-hidden="true" /></span><span className="min-w-0 flex-1"><span className={`block text-sm font-semibold ${headingText}`}>{action.label}</span><span className={`mt-0.5 block text-xs ${mutedText}`}>{action.description}</span></span><ChevronRight className={`h-4 w-4 ${isDark ? 'text-slate-600' : 'text-slate-400'}`} aria-hidden="true" /></motion.button>; })}</div></section>
 

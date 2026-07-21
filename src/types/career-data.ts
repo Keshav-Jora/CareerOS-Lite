@@ -1,4 +1,5 @@
 import type { Certificate, Note, Opportunity, Task, TimelineEntry } from '../types';
+import type { ExternalConnection } from '../services/integrations/contracts/Connection';
 
 export interface CareerSkill { id: string; name: string; level: 'beginner' | 'intermediate' | 'advanced'; tags: string[]; updatedAt: string; }
 export interface CareerLearning { id: string; title: string; provider?: string; status: 'planned' | 'in-progress' | 'completed'; progress: number; skills: string[]; completedAt?: string; updatedAt: string; }
@@ -20,6 +21,7 @@ export interface CanonicalCareerData {
   projects: CareerProject[];
   certifications: Certificate[];
   notes: Note[];
+  connections: ExternalConnection[];
 }
 
 export type LegacyGoal = Task;
