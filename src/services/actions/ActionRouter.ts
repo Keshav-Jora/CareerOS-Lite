@@ -169,7 +169,22 @@ export class ActionRouter {
       return candidate.length > 0 && plan.sourceMessage.toLowerCase().includes(candidate);
     });
     if (sourceOrganizationMatches.length === 1) return sourceOrganizationMatches[0].id;
-    return undefined;
+    const queryTokens = this.referenceTokens(`${title} ${plan.sourceMessage}`);
+    const ranked = dataService.repository.getAll<Record<string, unknown> & { id: string }>(entity)
+      .map((item) => ({ item, score: this.referenceScore(queryTokens, item) }))
+      .filter((candidate) => candidate.score > 0)
+      .sort((left, right) => right.score - left.score);
+    return ranked.length === 1 || (ranked.length > 1 && ranked[0].score > ranked[1].score)
+      ? ranked[0]?.item.id
+      : undefined;
+  }
+  private referenceTokens(value: string): Set<string> {
+    return new Set(value.toLowerCase().match(/[a-z0-9]+/g)?.filter((token) => !new Set(['the', 'my', 'this', 'that', 'an', 'a', 'remove', 'delete', 'update', 'change', 'changed', 'deadline', 'priority']).has(token)) ?? []);
+  }
+  private referenceScore(queryTokens: Set<string>, item: Record<string, unknown>): number {
+    const candidate = [item.title, item.name, item.organization].filter((value): value is string => typeof value === 'string').join(' ');
+    const candidateTokens = this.referenceTokens(candidate);
+    return [...queryTokens].filter((token) => candidateTokens.has(token)).length;
   }
   private findDuplicate(entity: CanonicalEntity, payload: Record<string, unknown>): Record<string, unknown> | undefined {
     if (entity !== 'opportunity' && entity !== 'journey') return undefined;

@@ -15,18 +15,18 @@ export class CanonicalCareerRepository {
     const value = { ...payload, id: payload.id ?? `${entity}-${Date.now()}` } as T;
     this.persist(entity, [...this.getAll<T>(entity), value]);
     if (entity === 'opportunity') logOpportunityDebug('CanonicalCareerRepository', 'src/services/data/CanonicalCareerRepository.ts', 'create', { entity, payload }, value);
-    return value;
+    this.notifyChanged(); return value;
   }
   update<T extends CanonicalRecord>(entity: CanonicalEntity, id: string, payload: Partial<T>): T | null {
     const current = this.getAll<T>(entity); const existing = current.find((value) => value.id === id);
     if (!existing) return null;
     const updated = { ...existing, ...payload, id } as T;
     this.persist(entity, current.map((value) => value.id === id ? updated : value));
-    return updated;
+    this.notifyChanged(); return updated;
   }
   delete(entity: CanonicalEntity, id: string): boolean {
     const current = this.getAll(entity); if (!current.some((value) => value.id === id)) return false;
-    this.persist(entity, current.filter((value) => value.id !== id)); return true;
+    this.persist(entity, current.filter((value) => value.id !== id)); this.notifyChanged(); return true;
   }
   get<T extends CanonicalRecord>(entity: CanonicalEntity, id: string): T | null { return this.getAll<T>(entity).find((value) => value.id === id) ?? null; }
   getAll<T extends CanonicalRecord>(entity: CanonicalEntity): T[] { return this.collection(entity) as T[]; }
@@ -73,6 +73,7 @@ export class CanonicalCareerRepository {
   initialize(): void { storage.initializeStorage(); }
   reset(): void { storage.resetStorageData(); }
   loadSeedData(): void { storage.loadSeedData(); }
+  private notifyChanged(): void { if (typeof window !== 'undefined') window.dispatchEvent(new Event('career-os-data-changed')); }
   private collection(entity: CanonicalEntity): CanonicalRecord[] {
     const snapshot = this.getSnapshot();
     const collections: Record<CanonicalEntity, CanonicalRecord[]> = { opportunity: snapshot.opportunities, project: snapshot.projects, goal: snapshot.goals, mission: snapshot.missions, learning: snapshot.learning, skill: snapshot.skills, certification: snapshot.certifications, note: snapshot.notes, journey: snapshot.journey };

@@ -40,7 +40,7 @@ export class CareerStatisticsService {
       ...journey,
       certifications: certifications.size,
       activeGoals: snapshot.goals.filter((goal) => goal.status === 'active').length,
-      missions: snapshot.missions.length,
+      missions: snapshot.missions.filter((mission) => mission.date === new Date().toISOString().slice(0, 10)).length,
       opportunities: snapshot.opportunities.length,
     };
   }
