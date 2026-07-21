@@ -7,17 +7,11 @@ import {
   Calendar,
   Link,
   Sparkles,
-  Award,
   Compass,
-  TrendingUp,
   FileText,
-  Bookmark,
-  Lightbulb,
-  Mic,
   Loader2,
   CheckCircle2,
   Globe,
-  MoreHorizontal,
 } from 'lucide-react';
 import { Opportunity, CategoryType, PriorityType } from '../types';
 import { simulateGeminiExtraction } from './OpportunitiesView';
@@ -54,13 +48,11 @@ export default function QuickAddModal({ theme, onAddOpportunity }: QuickAddModal
 
   // Speed Dial states
   const [menuOpen, setMenuOpen] = useState(false);
-  const [showSecondaryMenu, setShowSecondaryMenu] = useState(false);
   const [hudMessage, setHudMessage] = useState<string | null>(null);
 
-  const handleQuickAddPlaceholder = (type: string) => {
+  const showNotification = (message: string) => {
     setMenuOpen(false);
-    setShowSecondaryMenu(false);
-    setHudMessage(`⚡ Fast-Capture: New ${type} registered! (+15 XP Pathfinder Bonus)`);
+    setHudMessage(message);
     setTimeout(() => {
       setHudMessage(null);
     }, 4000);
@@ -75,30 +67,20 @@ export default function QuickAddModal({ theme, onAddOpportunity }: QuickAddModal
       action: () => {
         setIsOpen(true);
         setMenuOpen(false);
-        setShowSecondaryMenu(false);
       },
     },
     {
       label: 'Quick Note',
       icon: FileText,
       color: 'from-blue-500 to-indigo-600',
-      action: () => handleQuickAddPlaceholder('Quick Note'),
+      action: () => showNotification('Quick Note is available in your Notes workspace.'),
     },
     {
       label: 'Journey Entry',
       icon: Compass,
       color: 'from-amber-500 to-orange-600',
-      action: () => handleQuickAddPlaceholder('Journey Entry'),
+      action: () => showNotification('Journey Entry is available in your Career Journey.'),
     },
-  ];
-
-  // Secondary items hidden inside sub-menu
-  const secondarySpeedDialItems = [
-    { label: 'Voice Memo', icon: Mic, color: 'from-rose-500 to-red-600', action: () => handleQuickAddPlaceholder('Voice Memo') },
-    { label: 'Idea Spark', icon: Lightbulb, color: 'from-pink-500 to-rose-600', action: () => handleQuickAddPlaceholder('Idea Spark') },
-    { label: 'Bookmark Link', icon: Bookmark, color: 'from-purple-500 to-pink-600', action: () => handleQuickAddPlaceholder('Bookmark Link') },
-    { label: 'Daily Progress', icon: TrendingUp, color: 'from-teal-500 to-emerald-600', action: () => handleQuickAddPlaceholder('Daily Progress') },
-    { label: 'Certificate', icon: Award, color: 'from-emerald-500 to-teal-600', action: () => handleQuickAddPlaceholder('Certificate') },
   ];
 
   const resetForm = () => {
@@ -187,6 +169,7 @@ export default function QuickAddModal({ theme, onAddOpportunity }: QuickAddModal
     onAddOpportunity(newOpp);
     resetForm();
     setIsOpen(false);
+    showNotification('Opportunity added');
   };
 
   const categories: CategoryType[] = [
@@ -228,7 +211,7 @@ export default function QuickAddModal({ theme, onAddOpportunity }: QuickAddModal
             aria-live="polite"
             className="fixed top-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-full border border-indigo-500/30 bg-slate-900/95 text-slate-100 font-bold text-xs shadow-2xl backdrop-blur-md flex items-center gap-2"
           >
-            <Sparkles className="h-4 w-4 text-indigo-400 animate-spin" aria-hidden="true" />
+            <CheckCircle2 className="h-4 w-4 text-emerald-400" aria-hidden="true" />
             <span>{hudMessage}</span>
           </motion.div>
         )}
@@ -244,7 +227,6 @@ export default function QuickAddModal({ theme, onAddOpportunity }: QuickAddModal
               exit={{ opacity: 0 }}
               onClick={() => {
                 setMenuOpen(false);
-                setShowSecondaryMenu(false);
               }}
               className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-30 cursor-pointer"
             />
@@ -254,45 +236,7 @@ export default function QuickAddModal({ theme, onAddOpportunity }: QuickAddModal
               role="menu"
               aria-label="Quick capture speed dial"
             >
-              {/* Secondary menu items (if expanded) */}
-              <AnimatePresence>
-                {showSecondaryMenu && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="flex flex-col items-end gap-2 mb-1"
-                  >
-                    {secondarySpeedDialItems.map((item, idx) => {
-                      const Icon = item.icon;
-                      return (
-                        <motion.div
-                          key={item.label}
-                          initial={{ opacity: 0, y: 10, scale: 0.9 }}
-                          animate={{ opacity: 1, y: 0, scale: 1 }}
-                          exit={{ opacity: 0, y: 8, scale: 0.9 }}
-                          transition={{ delay: idx * 0.02, type: 'spring', stiffness: 300, damping: 25 }}
-                          className="flex items-center gap-2.5"
-                        >
-                          <span className="bg-slate-900/90 text-slate-300 border border-slate-800 text-[11px] font-medium px-2.5 py-1 rounded-lg shadow-md backdrop-blur-md select-none">
-                            {item.label}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={item.action}
-                            aria-label={`Quick capture ${item.label}`}
-                            className={`h-10 w-10 rounded-full bg-gradient-to-tr ${item.color} text-white shadow-md border border-white/10 hover:scale-105 active:scale-95 transition-transform flex items-center justify-center cursor-pointer min-h-[40px] min-w-[40px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500`}
-                          >
-                            <Icon className="h-4 w-4" aria-hidden="true" />
-                          </button>
-                        </motion.div>
-                      );
-                    })}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Primary 3 Speed Dial Items: Add Opportunity, Quick Note, Journey Entry */}
+              {/* Focused quick actions */}
               {primarySpeedDialItems.map((item, idx) => {
                 const Icon = item.icon;
                 return (
@@ -319,24 +263,6 @@ export default function QuickAddModal({ theme, onAddOpportunity }: QuickAddModal
                   </motion.div>
                 );
               })}
-
-              {/* Secondary Options Toggle */}
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 8 }}
-                className="flex items-center gap-2 pt-0.5"
-              >
-                <button
-                  type="button"
-                  onClick={() => setShowSecondaryMenu(!showSecondaryMenu)}
-                  aria-label={showSecondaryMenu ? 'Show fewer options' : 'Show more options'}
-                  className="bg-slate-900/90 text-slate-400 hover:text-slate-200 border border-slate-800/90 text-[10px] font-semibold px-2.5 py-1 rounded-lg flex items-center gap-1 backdrop-blur-md transition-colors cursor-pointer"
-                >
-                  <MoreHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
-                  <span>{showSecondaryMenu ? 'Fewer options' : 'More options'}</span>
-                </button>
-              </motion.div>
             </div>
           </>
         )}
@@ -348,7 +274,6 @@ export default function QuickAddModal({ theme, onAddOpportunity }: QuickAddModal
         id="floating-quick-add-btn"
         onClick={() => {
           setMenuOpen(!menuOpen);
-          if (menuOpen) setShowSecondaryMenu(false);
         }}
         aria-label={menuOpen ? 'Close quick add menu' : 'Open quick add menu'}
         aria-expanded={menuOpen}

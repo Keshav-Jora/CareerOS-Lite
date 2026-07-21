@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, X, Send, Bot, User, Zap, Database, Cpu } from 'lucide-react';
+import { Sparkles, X, Send, Bot, User, Zap, Database, Cpu, Menu, MessageSquare, MoreHorizontal, Pencil, Pin, Plus, Search, Trash2 } from 'lucide-react';
 import { Opportunity, DailyProgress, TimelineEntry } from '../types';
 import { useNovaChat } from '../hooks/useNovaChat';
+import type { NovaConversation } from '../types/career-data';
 
 interface AIAssistantProps {
   theme: 'light' | 'dark';
@@ -19,62 +20,77 @@ interface AIAssistantProps {
  */
 const MarkdownText = React.memo(function MarkdownText({ content, isStreaming }: { content: string; isStreaming?: boolean }) {
   const lines = content.split('\n');
+  const blocks: ReactNode[] = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const trimmed = line.trim();
+
+    if (trimmed.startsWith('```')) {
+      const language = trimmed.slice(3).trim() || 'text';
+      const code: string[] = [];
+      index += 1;
+      while (index < lines.length && !lines[index].trim().startsWith('```')) {
+        code.push(lines[index]);
+        index += 1;
+      }
+      blocks.push(<pre key={`code-${index}`} className="my-2 overflow-x-auto rounded-xl border border-slate-700/80 bg-slate-950 p-3 text-[11px] leading-relaxed text-slate-200"><span className="mb-2 block font-mono text-[9px] uppercase tracking-wider text-indigo-300">{language}</span><code>{code.join('\n')}</code></pre>);
+      continue;
+    }
+
+    if (trimmed.includes('|') && /^\s*\|?\s*:?-{3,}/.test(lines[index + 1] ?? '')) {
+      const cells = (value: string) => value.trim().replace(/^\||\|$/g, '').split('|').map((cell) => cell.trim());
+      const header = cells(line);
+      index += 2;
+      const rows: string[][] = [];
+      while (index < lines.length && lines[index].includes('|')) {
+        rows.push(cells(lines[index]));
+        index += 1;
+      }
+      index -= 1;
+      blocks.push(<div key={`table-${index}`} className="my-2 overflow-x-auto rounded-xl border border-slate-800"><table className="w-full min-w-[360px] text-left text-[11px]"><thead className="bg-slate-900/80 text-slate-200"><tr>{header.map((cell, cellIndex) => <th key={cellIndex} className="px-3 py-2 font-semibold">{parseInlineMarkdown(cell)}</th>)}</tr></thead><tbody>{rows.map((row, rowIndex) => <tr key={rowIndex} className="border-t border-slate-800/80 text-slate-300">{header.map((_, cellIndex) => <td key={cellIndex} className="px-3 py-2 align-top">{parseInlineMarkdown(row[cellIndex] ?? '')}</td>)}</tr>)}</tbody></table></div>);
+      continue;
+    }
+
+    if (!trimmed) {
+      blocks.push(<div key={`space-${index}`} className="h-1" />);
+      continue;
+    }
+
+    const heading = trimmed.match(/^(#{1,3})\s+(.*)$/);
+    if (heading) {
+      blocks.push(<h4 key={`heading-${index}`} className="mt-1.5 mb-1 flex items-center gap-1 font-display text-xs font-bold text-indigo-400"><Sparkles className="h-3 w-3 text-indigo-400" />{parseInlineMarkdown(heading[2])}</h4>);
+      continue;
+    }
+
+    const checklist = trimmed.match(/^[-*]\s+\[([ xX])\]\s*(.*)$/);
+    if (checklist) {
+      blocks.push(<div key={`check-${index}`} className="flex items-start gap-2 pl-1"><span className={`mt-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded border text-[9px] ${checklist[1].toLowerCase() === 'x' ? 'border-emerald-500 bg-emerald-500/20 text-emerald-300' : 'border-slate-600 text-transparent'}`}>✓</span><span className={checklist[1].toLowerCase() === 'x' ? 'text-slate-400 line-through' : ''}>{parseInlineMarkdown(checklist[2])}</span></div>);
+      continue;
+    }
+
+    if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+      blocks.push(<div key={`bullet-${index}`} className="flex items-start gap-2 pl-1"><span className="mt-0.5 shrink-0 font-bold text-indigo-400">•</span><span className="flex-1">{parseInlineMarkdown(trimmed.replace(/^[-*]\s*/, ''))}</span></div>);
+      continue;
+    }
+
+    const ordered = trimmed.match(/^(\d+)\.\s*(.*)/);
+    if (ordered) {
+      blocks.push(<div key={`ordered-${index}`} className="flex items-start gap-2 pl-1"><span className="shrink-0 font-mono text-[11px] font-bold text-indigo-400">{ordered[1]}.</span><span className="flex-1">{parseInlineMarkdown(ordered[2])}</span></div>);
+      continue;
+    }
+
+    if (trimmed.startsWith('> ')) {
+      blocks.push(<div key={`quote-${index}`} className="my-1 rounded-r-lg border-l-2 border-indigo-500/60 bg-indigo-500/5 py-1 pl-2.5 text-[11px] italic text-slate-300">{parseInlineMarkdown(trimmed.replace(/^>\s*/, ''))}</div>);
+      continue;
+    }
+
+    blocks.push(<p key={`text-${index}`}>{parseInlineMarkdown(line)}</p>);
+  }
 
   return (
     <div className="space-y-1.5 text-xs leading-relaxed font-sans">
-      {lines.map((line, idx) => {
-        if (!line.trim()) {
-          return <div key={idx} className="h-1" />;
-        }
-
-        // Header 3 or 2
-        if (line.startsWith('### ') || line.startsWith('## ')) {
-          const title = line.replace(/^###?\s*/, '');
-          return (
-            <h4 key={idx} className="font-display font-bold text-xs text-indigo-400 mt-1.5 mb-1 flex items-center gap-1">
-              <Sparkles className="h-3 w-3 text-indigo-400" />
-              {parseInlineMarkdown(title)}
-            </h4>
-          );
-        }
-
-        // Bullet point
-        if (line.trim().startsWith('- ') || line.trim().startsWith('* ')) {
-          const bulletContent = line.trim().replace(/^[-*]\s*/, '');
-          return (
-            <div key={idx} className="flex items-start gap-2 pl-1 my-0.5">
-              <span className="text-indigo-400 font-bold shrink-0 mt-0.5">•</span>
-              <span className="flex-1">{parseInlineMarkdown(bulletContent)}</span>
-            </div>
-          );
-        }
-
-        // Numbered list
-        if (/^\d+\.\s/.test(line.trim())) {
-          const numMatch = line.trim().match(/^(\d+)\.\s*(.*)/);
-          if (numMatch) {
-            return (
-              <div key={idx} className="flex items-start gap-2 pl-1 my-0.5">
-                <span className="text-indigo-400 font-mono font-bold shrink-0 text-[11px]">{numMatch[1]}.</span>
-                <span className="flex-1">{parseInlineMarkdown(numMatch[2])}</span>
-              </div>
-            );
-          }
-        }
-
-        // Blockquote
-        if (line.trim().startsWith('> ')) {
-          const quoteText = line.trim().replace(/^>\s*/, '');
-          return (
-            <div key={idx} className="pl-2.5 py-1 my-1 border-l-2 border-indigo-500/60 bg-indigo-500/5 rounded-r-lg italic text-[11px] text-slate-300">
-              {parseInlineMarkdown(quoteText)}
-            </div>
-          );
-        }
-
-        // Standard Paragraph
-        return <p key={idx}>{parseInlineMarkdown(line)}</p>;
-      })}
+      {blocks}
 
       {/* Blinking Cursor Indicator when Streaming */}
       {isStreaming && (
@@ -124,11 +140,119 @@ function parseInlineMarkdown(text: string) {
   return parts.length > 0 ? parts : text;
 }
 
+interface ConversationSidebarProps {
+  theme: 'light' | 'dark';
+  conversations: NovaConversation[];
+  activeConversationId: string | null;
+  onNewChat: () => void;
+  onSelect: (conversationId: string) => void;
+  onRename: (conversationId: string, title: string) => void;
+  onDelete: (conversationId: string) => void;
+  onTogglePin: (conversationId: string) => void;
+}
+
+type ConversationDateGroup = 'Today' | 'Yesterday' | 'Last 7 Days' | 'Older';
+
+function getConversationDateGroup(updatedAt: string): ConversationDateGroup {
+  const updated = new Date(updatedAt);
+  if (Number.isNaN(updated.getTime())) return 'Older';
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const sevenDaysAgo = new Date(today);
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+  if (updated >= today) return 'Today';
+  if (updated >= yesterday) return 'Yesterday';
+  if (updated >= sevenDaysAgo) return 'Last 7 Days';
+  return 'Older';
+}
+
+function conversationPreview(conversation: NovaConversation): string {
+  const message = [...conversation.messages].reverse().find((entry) => entry.content.trim());
+  const preview = message?.content.replace(/\s+/g, ' ').trim() ?? '';
+  return preview.length > 72 ? `${preview.slice(0, 69).trimEnd()}...` : preview || 'No messages yet';
+}
+
+function conversationUpdatedAt(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const today = new Date();
+  return date.toDateString() === today.toDateString()
+    ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
+
+function ConversationSidebar({ theme, conversations, activeConversationId, onNewChat, onSelect, onRename, onDelete, onTogglePin, mobile = false }: ConversationSidebarProps & { mobile?: boolean }) {
+  const [query, setQuery] = useState('');
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const activeItemRef = useRef<HTMLDivElement>(null);
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredConversations = conversations.filter((conversation) => !normalizedQuery || conversation.title.toLowerCase().includes(normalizedQuery) || conversationPreview(conversation).toLowerCase().includes(normalizedQuery));
+  const panelClass = theme === 'dark' ? 'border-slate-800/80 bg-slate-950/50' : 'border-slate-200 bg-slate-50/80';
+  const inputClass = theme === 'dark' ? 'border-slate-800 bg-slate-900/70 text-slate-100 placeholder:text-slate-500' : 'border-slate-200 bg-white text-slate-800 placeholder:text-slate-400';
+
+  const requestRename = (conversation: NovaConversation) => {
+    const title = window.prompt('Rename chat', conversation.title);
+    if (title?.trim()) onRename(conversation.id, title);
+  };
+
+  const requestDelete = (conversation: NovaConversation) => {
+    if (window.confirm(`Delete “${conversation.title}”? This only removes the conversation history.`)) onDelete(conversation.id);
+  };
+
+  const groups = (['Today', 'Yesterday', 'Last 7 Days', 'Older'] as const).map((label) => ({ label, conversations: filteredConversations.filter((conversation) => getConversationDateGroup(conversation.updatedAt) === label) })).filter((group) => group.conversations.length > 0);
+
+  useEffect(() => { activeItemRef.current?.scrollIntoView({ block: 'nearest' }); }, [activeConversationId]);
+
+  return (
+    <aside className={`${mobile ? 'flex' : 'hidden md:flex'} w-60 shrink-0 flex-col border-r p-3 ${panelClass}`} aria-label="Conversation history">
+      <button type="button" onClick={onNewChat} className="mb-3 flex w-full items-center justify-center gap-2 rounded-xl border border-indigo-500/40 bg-indigo-500/10 px-3 py-2 text-xs font-semibold text-indigo-300 transition-colors hover:bg-indigo-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+        <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+        New chat
+      </button>
+      <label className="relative mb-3 block">
+        <span className="sr-only">Search conversations</span>
+        <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500" aria-hidden="true" />
+        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search chats" className={`w-full rounded-lg border py-2 pl-8 pr-2 text-xs outline-none focus:ring-1 focus:ring-indigo-500 ${inputClass}`} />
+      </label>
+      <div className="min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
+        {filteredConversations.length === 0 ? (
+          <p className="px-2 py-4 text-center text-[11px] leading-relaxed text-slate-500">Your saved Nova conversations will appear here.</p>
+        ) : groups.map((group) => (
+          <section key={group.label} className="pb-3" aria-label={group.label}>
+            <p className="mb-1 px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">{group.label}</p>
+            {group.conversations.map((conversation) => {
+              const isActive = conversation.id === activeConversationId;
+              const isMenuOpen = conversation.id === openMenuId;
+              return (
+                <div key={conversation.id} ref={isActive ? activeItemRef : undefined} className={`group relative mb-1 rounded-xl ${isActive ? 'bg-indigo-500/15 text-indigo-200' : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'}`}>
+                  <button type="button" onClick={() => onSelect(conversation.id)} className="w-full min-w-0 px-2 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+                    <span className="flex items-center gap-2 text-xs font-medium"><MessageSquare className="h-3 w-3 shrink-0" aria-hidden="true" /> <span className="truncate">{conversation.title}</span>{conversation.pinned && <Pin className="h-3 w-3 shrink-0 text-indigo-300" aria-label="Pinned" />}</span>
+                    <span className="mt-1 flex items-center gap-2 pl-5 text-[10px] text-slate-500"><span className="min-w-0 flex-1 truncate">{conversationPreview(conversation)}</span><span className="shrink-0">{conversationUpdatedAt(conversation.updatedAt)}</span></span>
+                  </button>
+                  <button type="button" onClick={() => setOpenMenuId(isMenuOpen ? null : conversation.id)} aria-label={`Conversation actions for ${conversation.title}`} aria-expanded={isMenuOpen} className="absolute right-1 top-1 rounded-lg p-1.5 text-slate-500 opacity-0 transition-opacity hover:bg-slate-700/60 hover:text-slate-200 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500"><MoreHorizontal className="h-3.5 w-3.5" /></button>
+                  {isMenuOpen && <div className={`absolute right-1 top-8 z-20 w-32 rounded-lg border p-1 shadow-xl ${theme === 'dark' ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+                    <button type="button" onClick={() => { requestRename(conversation); setOpenMenuId(null); }} className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs hover:bg-slate-800/50"><Pencil className="h-3 w-3" /> Rename</button>
+                    <button type="button" onClick={() => { onTogglePin(conversation.id); setOpenMenuId(null); }} className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs hover:bg-slate-800/50"><Pin className="h-3 w-3" /> {conversation.pinned ? 'Unpin' : 'Pin'}</button>
+                    <button type="button" onClick={() => { requestDelete(conversation); setOpenMenuId(null); }} className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-rose-300 hover:bg-rose-500/10"><Trash2 className="h-3 w-3" /> Delete</button>
+                  </div>}
+                </div>
+              );
+            })}
+          </section>
+        ))}
+      </div>
+    </aside>
+  );
+}
+
 export default function AIAssistant({ theme, opportunities, progress, timeline, variant = 'floating', onActionExecuted }: AIAssistantProps) {
   const isWorkspace = variant === 'workspace';
   const [isOpen, setIsOpen] = useState(isWorkspace);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const userName = localStorage.getItem('career_os_user_name') || 'Student';
-  const { messages, inputText, setInputText, assistantState, sendMessage } = useNovaChat({
+  const { messages, inputText, setInputText, assistantState, sendMessage, conversations, activeConversationId, newChat, selectConversation, renameConversation, deleteConversation, toggleConversationPin } = useNovaChat({
     opportunities,
     progress,
     timeline,
@@ -250,15 +374,16 @@ export default function AIAssistant({ theme, opportunities, progress, timeline, 
 
   // Close Nova assistant on Escape key
   useEffect(() => {
-    if (isWorkspace) return;
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (isWorkspace && e.key === 'Escape' && isHistoryOpen) { setIsHistoryOpen(false); return; }
+      if (isWorkspace) return;
       if (e.key === 'Escape' && isOpen) {
         setIsOpen(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, isWorkspace]);
+  }, [isHistoryOpen, isOpen, isWorkspace]);
 
   const quickPrompts = [
     { label: '🎯 Today Priorities', query: 'What should I do today?' },
@@ -266,6 +391,7 @@ export default function AIAssistant({ theme, opportunities, progress, timeline, 
     { label: '📊 Coding Metrics', query: 'Check my progress' },
     { label: '💡 Interview Tips', query: 'Give me interview prep tips' },
   ];
+  const showQuickPrompts = messages.length <= 1 && assistantState === 'idle';
 
   return (
     <>
@@ -344,8 +470,21 @@ export default function AIAssistant({ theme, opportunities, progress, timeline, 
               >
                 <X className="h-4 w-4" aria-hidden="true" />
               </button>}
+              {isWorkspace && <button type="button" onClick={() => setIsHistoryOpen(true)} aria-label="Open conversation history" className="rounded-xl p-2 text-slate-400 hover:bg-slate-800/60 hover:text-white md:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"><Menu className="h-4 w-4" /></button>}
             </div>
 
+            <AnimatePresence>
+              {isWorkspace && isHistoryOpen && <>
+                <motion.button type="button" aria-label="Close conversation history" onClick={() => setIsHistoryOpen(false)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] bg-slate-950/65 backdrop-blur-sm md:hidden" />
+                <motion.div initial={{ x: -280 }} animate={{ x: 0 }} exit={{ x: -280 }} transition={{ type: 'spring', stiffness: 360, damping: 34 }} className="fixed inset-y-0 left-0 z-[70] w-72 shadow-2xl md:hidden">
+                  <ConversationSidebar theme={theme} conversations={conversations} activeConversationId={activeConversationId} onNewChat={() => { newChat(); setIsHistoryOpen(false); }} onSelect={(id) => { selectConversation(id); setIsHistoryOpen(false); }} onRename={renameConversation} onDelete={deleteConversation} onTogglePin={toggleConversationPin} mobile />
+                </motion.div>
+              </>}
+            </AnimatePresence>
+
+            <div className="flex min-h-0 flex-1">
+              {isWorkspace && <ConversationSidebar theme={theme} conversations={conversations} activeConversationId={activeConversationId} onNewChat={newChat} onSelect={selectConversation} onRename={renameConversation} onDelete={deleteConversation} onTogglePin={toggleConversationPin} />}
+              <div className="flex min-w-0 flex-1 flex-col">
             {/* Reading Data State Banner */}
             <AnimatePresence>
               {assistantState === 'reading' && (
@@ -433,7 +572,7 @@ export default function AIAssistant({ theme, opportunities, progress, timeline, 
             </div>
 
             {/* Suggested Prompts Section */}
-            <div className="px-3 py-2 border-t border-slate-800/30 bg-slate-950/20 flex gap-1.5 overflow-x-auto shrink-0 scrollbar-none" role="group" aria-label="Suggested quick prompts">
+            {showQuickPrompts && <div className="px-3 py-2 border-t border-slate-800/30 bg-slate-950/20 flex gap-1.5 overflow-x-auto shrink-0 scrollbar-none" role="group" aria-label="Suggested quick prompts">
               {quickPrompts.map((p, idx) => (
                 <button
                   type="button"
@@ -451,7 +590,7 @@ export default function AIAssistant({ theme, opportunities, progress, timeline, 
                   {p.label}
                 </button>
               ))}
-            </div>
+            </div>}
 
             {/* Input Box */}
             <div className="p-3 border-t border-slate-800/30 bg-slate-950/30 shrink-0">
@@ -493,6 +632,8 @@ export default function AIAssistant({ theme, opportunities, progress, timeline, 
                   <Send className="h-3.5 w-3.5" aria-hidden="true" />
                 </button>
               </form>
+            </div>
+              </div>
             </div>
           </motion.div>
         )}

@@ -18,6 +18,10 @@ export class RepositoryResponseService {
     if (/\bhow many opportunities\b|\bopportunity count\b/i.test(value)) return `You currently have **${snapshot.opportunities.length} ${snapshot.opportunities.length === 1 ? 'opportunity' : 'opportunities'}** tracked.`;
     if (/^(?:what|show|list)(?: are)?(?: my)? certifications?\??$|\bwhat certifications? do i have\b|\bshow (?:my )?certifications?\b/i.test(value)) return this.certifications(snapshot.certifications, snapshot.journey);
     if (/^(?:what|show|list)(?: are)?(?: my)? notes?\??$|\bshow (?:my )?notes?\b/i.test(value)) return this.notes(snapshot.notes);
+    if (/\b(?:show|list)(?: my )?journey\b|\bshow (?:my )?(?:timeline|milestones?)\b/i.test(value)) return this.journey(snapshot.journey);
+    if (/\b(?:summarize|summary|recap).*(?:journey|timeline)\b/i.test(value)) return this.journeySummary(snapshot.journey);
+    if (/\bsearch (?:my )?notes?\b/i.test(value)) return this.searchNotes(snapshot.notes, value.replace(/^.*?\bnotes?\b/i, '').trim());
+    if (/\b(?:weekly progress|practice summary|coding progress|coding hours|dsa questions)\b/i.test(value)) return this.progress();
     return null;
   }
 
@@ -72,6 +76,33 @@ export class RepositoryResponseService {
   private notes(notes: ReturnType<typeof dataService.repository.getSnapshot>['notes']): string {
     if (!notes.length) return "You don't have any notes recorded right now.";
     return `## Notes\n\n${notes.map((note) => `- ${note.title}`).join('\n')}`;
+  }
+
+  private searchNotes(notes: ReturnType<typeof dataService.repository.getSnapshot>['notes'], query: string): string {
+    if (!notes.length) return "You don't have any notes recorded right now.";
+    const terms = query.replace(/\b(for|about|with)\b/g, '').trim().toLowerCase();
+    const results = terms ? notes.filter((note) => `${note.title} ${note.content} ${note.tags.join(' ')}`.toLowerCase().includes(terms)) : notes;
+    return results.length ? `## Notes\n\n${results.map((note) => `- ${note.title}`).join('\n')}` : `I couldn't find any notes matching **${query}**.`;
+  }
+
+  private journey(journey: ReturnType<typeof dataService.repository.getSnapshot>['journey']): string {
+    if (!journey.length) return "You don't have any journey entries yet.";
+    return `## Career journey\n\n${journey.slice(0, 8).map((entry) => `- **${entry.date}** — ${entry.achievements || entry.built || entry.learned || 'Career milestone'}`).join('\n')}`;
+  }
+
+  private journeySummary(journey: ReturnType<typeof dataService.repository.getSnapshot>['journey']): string {
+    if (!journey.length) return "You don't have any journey entries yet.";
+    const certificates = journey.flatMap((entry) => entry.certificates).length;
+    return `## Journey summary\n\n- Milestones: ${journey.length}\n- Certifications recorded in journey: ${certificates}\n- Latest: ${journey[0].achievements || journey[0].built || journey[0].learned || 'Career milestone'}`;
+  }
+
+  private progress(): string {
+    const progress = dataService.repository.getProgress();
+    if (!progress.length) return "You don't have any practice progress recorded yet.";
+    const week = progress.slice(-7);
+    const hours = week.reduce((total, entry) => total + entry.codingHours, 0);
+    const dsa = week.reduce((total, entry) => total + entry.dsaQuestions, 0);
+    return `## Practice summary\n\n- Coding hours this week: **${hours.toFixed(1)}**\n- DSA questions this week: **${dsa}**\n- Logged practice days: **${week.length}**`;
   }
 
   private certifications(certifications: ReturnType<typeof dataService.repository.getSnapshot>['certifications'], journey: ReturnType<typeof dataService.repository.getSnapshot>['journey']): string {

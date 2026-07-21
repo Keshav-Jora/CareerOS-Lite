@@ -16,14 +16,25 @@ export class CloudSyncService {
     this.queue.clear();
   }
   queueSync(): void { this.queue.enqueue(); }
+  async overwrite(userId: string): Promise<void> {
+    const db = getFirebaseFirestore();
+    if (!db) throw new Error('Cloud sync is not configured.');
+    if (!navigator.onLine) throw new Error('Connect to the internet to reset your cloud data.');
+    const data = dataService.repository.getSnapshot();
+    await setDoc(doc(db, 'careerData', userId), { data, updatedAt: data.updatedAt });
+    this.queue.clear();
+  }
+  stop(): void { this.queue.clear(); }
   private localEnvelope(): CloudEnvelope<CanonicalCareerData> { const data = dataService.repository.getSnapshot(); return { data, updatedAt: data.updatedAt }; }
   private applyCloud(data: CanonicalCareerData): void { dataService.repository.restoreSnapshot(data); }
   private normalize(value: unknown): CloudEnvelope<CanonicalCareerData> | null {
     if (!value || typeof value !== 'object') return null;
     const envelope = value as Partial<CloudEnvelope<CanonicalCareerData>>;
-    if (envelope.data?.schemaVersion === 1) return envelope as CloudEnvelope<CanonicalCareerData>;
+    if (envelope.data?.schemaVersion === 1) {
+      return { ...envelope, data: { ...envelope.data, conversations: envelope.data.conversations ?? [] } } as CloudEnvelope<CanonicalCareerData>;
+    }
     const legacy = envelope.data as unknown as Record<string, unknown> | undefined; if (!legacy) return null;
     const local = dataService.repository.getSnapshot();
-    return { updatedAt: envelope.updatedAt ?? local.updatedAt, data: { ...local, updatedAt: envelope.updatedAt ?? local.updatedAt, opportunities: (legacy.opportunities as CanonicalCareerData['opportunities']) ?? local.opportunities, journey: (legacy.timelineEntries as CanonicalCareerData['journey']) ?? local.journey, certifications: (legacy.certificates as CanonicalCareerData['certifications']) ?? local.certifications, notes: (legacy.notes as CanonicalCareerData['notes']) ?? local.notes } };
+    return { updatedAt: envelope.updatedAt ?? local.updatedAt, data: { ...local, updatedAt: envelope.updatedAt ?? local.updatedAt, opportunities: (legacy.opportunities as CanonicalCareerData['opportunities']) ?? local.opportunities, journey: (legacy.timelineEntries as CanonicalCareerData['journey']) ?? local.journey, certifications: (legacy.certificates as CanonicalCareerData['certifications']) ?? local.certifications, notes: (legacy.notes as CanonicalCareerData['notes']) ?? local.notes, conversations: (legacy.conversations as CanonicalCareerData['conversations']) ?? [] } };
   }
 }

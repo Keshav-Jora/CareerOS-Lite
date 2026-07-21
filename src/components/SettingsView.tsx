@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Settings,
@@ -18,7 +18,7 @@ interface SettingsViewProps {
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
   onRefreshData: () => void;
-  onResetData?: () => void;
+  onResetData?: () => Promise<void> | void;
   onLoadSeedData?: () => void;
   authUser: FirebaseUser | null;
   syncStatus: 'synced' | 'syncing' | 'offline';
@@ -37,6 +37,14 @@ export default function SettingsView({ theme, onToggleTheme, onRefreshData, onRe
   const [gradYear, setGradYear] = useState(() => localStorage.getItem('career_os_user_grad') || 'Not Set');
 
   const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [isResetting, setIsResetting] = useState(false);
+
+  useEffect(() => {
+    if (authUser) return;
+    setName('Student');
+    setAffiliation('Not Set');
+    setGradYear('Not Set');
+  }, [authUser]);
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,18 +97,22 @@ export default function SettingsView({ theme, onToggleTheme, onRefreshData, onRe
   };
 
   // Reset to empty fresh user state
-  const handleResetApp = () => {
+  const handleResetApp = async () => {
     const isConfirmed = confirm(
       'Are you absolutely sure you want to reset CareerOS Lite? This will completely clear all local data (XP = 0, Level = 1, empty opportunities, empty logs).'
     );
     if (isConfirmed) {
-      if (onResetData) {
-        onResetData();
-      } else {
-        localStorage.clear();
+      setIsResetting(true);
+      try {
+        if (onResetData) await onResetData();
+        else localStorage.clear();
+        alert('CareerOS Lite data has been successfully reset.');
+      } catch (error) {
+        console.error('CareerOS reset failed.', error);
+        alert('CareerOS could not finish the cloud reset. Check your connection and try again.');
+      } finally {
+        setIsResetting(false);
       }
-      alert('CareerOS Lite data has been successfully reset! All career data cleared.');
-      window.location.reload();
     }
   };
 
@@ -137,7 +149,7 @@ export default function SettingsView({ theme, onToggleTheme, onRefreshData, onRe
             <div className="mt-3 flex items-center justify-between gap-4"><div><p className="text-sm font-semibold text-slate-100">{authUser ? authUser.displayName ?? 'CareerOS Account' : 'Guest profile'}</p><p className="mt-1 text-xs text-slate-400">{authUser ? authUser.email : 'Sign in to keep your career data synced across devices.'}</p></div><AuthControls user={authUser} syncStatus={syncStatus} onSignIn={onSignIn} onSignOut={onSignOut} busy={authBusy} /></div>
             {authError && <p role="alert" className="mt-3 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs leading-5 text-rose-200">{authError}</p>}
           </div>
-          <div
+          {authUser && <div
             className={`p-5 rounded-2xl border ${
               theme === 'dark' ? 'glass-panel-dark' : 'glass-panel-light'
             } space-y-4`}
@@ -211,7 +223,7 @@ export default function SettingsView({ theme, onToggleTheme, onRefreshData, onRe
                 </button>
               </div>
             </form>
-          </div>
+          </div>}
 
           {/* Local storage sync options */}
           <div
@@ -331,9 +343,10 @@ export default function SettingsView({ theme, onToggleTheme, onRefreshData, onRe
                 <button
                   type="button"
                   onClick={handleResetApp}
-                  className="w-full py-2.5 rounded-xl border border-rose-500/20 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 font-bold text-xs transition-colors shadow-sm text-center cursor-pointer"
+                  disabled={isResetting}
+                  className="w-full py-2.5 rounded-xl border border-rose-500/20 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 font-bold text-xs transition-colors shadow-sm text-center cursor-pointer disabled:cursor-wait disabled:opacity-60"
                 >
-                  Reset Career Data (Clear All)
+                  {isResetting ? 'Resetting Career Data...' : 'Reset Career Data (Clear All)'}
                 </button>
                 {onLoadSeedData && (
                   <button

@@ -1,15 +1,15 @@
 import * as storage from '../../utils/storage';
-import type { CanonicalCareerData, CareerGoal, CareerLearning, CareerMission, CareerProject, CareerSkill } from '../../types/career-data';
+import type { CanonicalCareerData, CareerGoal, CareerLearning, CareerMission, CareerProject, CareerSkill, NovaConversation } from '../../types/career-data';
 import type { ActivityLog, AppNotification, Certificate, DailyProgress, Note, Opportunity, Task, TimelineEntry } from '../../types';
 import type { ExternalConnection } from '../integrations/contracts/Connection';
 import { logOpportunityDebug } from '../../utils/opportunityDebug';
 
-export type CanonicalEntity = 'opportunity' | 'project' | 'goal' | 'mission' | 'learning' | 'skill' | 'certification' | 'note' | 'journey' | 'connection';
+export type CanonicalEntity = 'opportunity' | 'project' | 'goal' | 'mission' | 'learning' | 'skill' | 'certification' | 'note' | 'journey' | 'connection' | 'conversation';
 type CanonicalRecord = { id: string };
 
-const KEYS = { skills: 'career_os_skills', learning: 'career_os_learning', goals: 'career_os_goals', missions: 'career_os_missions', projects: 'career_os_projects', tasks: 'career_os_dashboard_tasks' } as const;
+const KEYS = { skills: 'career_os_skills', learning: 'career_os_learning', goals: 'career_os_goals', missions: 'career_os_missions', projects: 'career_os_projects', conversations: 'career_os_nova_conversations', tasks: 'career_os_dashboard_tasks' } as const;
 const read = <T>(key: string, fallback: T): T => { try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) as T : fallback; } catch { return fallback; } };
-const write = <T>(key: string, value: T) => localStorage.setItem(key, JSON.stringify(value));
+const write = <T>(key: string, value: T) => { localStorage.setItem(key, JSON.stringify(value)); storage.touchCareerDataUpdatedAt(); };
 
 /** Single canonical boundary for future AI extraction; migrates legacy task records on first read. */
 export class CanonicalCareerRepository {
@@ -42,18 +42,40 @@ export class CanonicalCareerRepository {
     };
   }
   getSnapshot(): CanonicalCareerData {
-    const legacy = this.getLegacySnapshot(); const now = new Date().toISOString();
+    const legacy = this.getLegacySnapshot();
+    const now = new Date().toISOString();
     const goals = this.migrateGoals(read<CareerGoal[]>(KEYS.goals, []), read<Task[]>(KEYS.tasks, []), now);
-    return { schemaVersion: 1, updatedAt: legacy.activities[0]?.timestamp ?? now, opportunities: legacy.opportunities, journey: legacy.timelineEntries, learning: read<CareerLearning[]>(KEYS.learning, []), skills: read<CareerSkill[]>(KEYS.skills, []), goals, missions: read<CareerMission[]>(KEYS.missions, []), projects: read<CareerProject[]>(KEYS.projects, []), certifications: legacy.certificates, notes: legacy.notes, connections: storage.getConnections() };
+    const learning = read<CareerLearning[]>(KEYS.learning, []);
+    const skills = read<CareerSkill[]>(KEYS.skills, []);
+    const missions = read<CareerMission[]>(KEYS.missions, []);
+    const projects = read<CareerProject[]>(KEYS.projects, []);
+    const conversations = read<NovaConversation[]>(KEYS.conversations, []);
+    const connections = storage.getConnections();
+    const hasData = [legacy.opportunities, legacy.timelineEntries, legacy.progressData, legacy.certificates, legacy.notes, legacy.activities, learning, skills, goals, missions, projects, connections, conversations].some((collection) => collection.length > 0);
+    const updatedAt = storage.getCareerDataUpdatedAt() ?? (hasData ? legacy.activities[0]?.timestamp ?? now : new Date(0).toISOString());
+    if (hasData && !storage.getCareerDataUpdatedAt()) storage.setCareerDataUpdatedAt(updatedAt);
+    return { schemaVersion: 1, updatedAt, opportunities: legacy.opportunities, journey: legacy.timelineEntries, learning, skills, goals, missions, projects, certifications: legacy.certificates, notes: legacy.notes, connections, conversations };
   }
   saveSkills(value: CareerSkill[]) { write(KEYS.skills, value); }
   saveLearning(value: CareerLearning[]) { write(KEYS.learning, value); }
   saveGoals(value: CareerGoal[]) { write(KEYS.goals, value); }
   saveMissions(value: CareerMission[]) { write(KEYS.missions, value); }
   saveProjects(value: CareerProject[]) { write(KEYS.projects, value); }
+  saveConversations(value: NovaConversation[]) { write(KEYS.conversations, value); }
   restoreSnapshot(snapshot: CanonicalCareerData): void {
-    snapshot.opportunities.forEach((value) => this.saveOpportunity(value)); snapshot.journey.forEach((value) => this.saveJourney(value)); snapshot.certifications.forEach((value) => this.saveCertification(value)); snapshot.notes.forEach((value) => this.saveNote(value)); this.saveConnections(snapshot.connections ?? []);
-    this.saveSkills(snapshot.skills); this.saveLearning(snapshot.learning); this.saveGoals(snapshot.goals); this.saveMissions(snapshot.missions); this.saveProjects(snapshot.projects);
+    storage.saveOpportunities(snapshot.opportunities);
+    storage.saveTimelineEntries(snapshot.journey);
+    storage.saveCertificates(snapshot.certifications);
+    storage.saveNotes(snapshot.notes);
+    storage.saveConnections(snapshot.connections ?? []);
+    localStorage.setItem(KEYS.skills, JSON.stringify(snapshot.skills));
+    localStorage.setItem(KEYS.learning, JSON.stringify(snapshot.learning));
+    localStorage.setItem(KEYS.goals, JSON.stringify(snapshot.goals));
+    localStorage.setItem(KEYS.missions, JSON.stringify(snapshot.missions));
+    localStorage.setItem(KEYS.projects, JSON.stringify(snapshot.projects));
+    localStorage.setItem(KEYS.conversations, JSON.stringify(snapshot.conversations ?? []));
+    storage.setCareerDataUpdatedAt(snapshot.updatedAt);
+    this.notifyChanged();
   }
   getOpportunities(): Opportunity[] { return storage.getOpportunities(); }
   saveOpportunity(value: Opportunity): void { storage.saveOpportunity(value); }
@@ -80,7 +102,7 @@ export class CanonicalCareerRepository {
   private notifyChanged(): void { if (typeof window !== 'undefined') window.dispatchEvent(new Event('career-os-data-changed')); }
   private collection(entity: CanonicalEntity): CanonicalRecord[] {
     const snapshot = this.getSnapshot();
-    const collections: Record<CanonicalEntity, CanonicalRecord[]> = { opportunity: snapshot.opportunities, project: snapshot.projects, goal: snapshot.goals, mission: snapshot.missions, learning: snapshot.learning, skill: snapshot.skills, certification: snapshot.certifications, note: snapshot.notes, journey: snapshot.journey, connection: snapshot.connections };
+    const collections: Record<CanonicalEntity, CanonicalRecord[]> = { opportunity: snapshot.opportunities, project: snapshot.projects, goal: snapshot.goals, mission: snapshot.missions, learning: snapshot.learning, skill: snapshot.skills, certification: snapshot.certifications, note: snapshot.notes, journey: snapshot.journey, connection: snapshot.connections, conversation: snapshot.conversations };
     return collections[entity] as CanonicalRecord[];
   }
   private persist(entity: CanonicalEntity, values: CanonicalRecord[]): void {
@@ -89,6 +111,7 @@ export class CanonicalCareerRepository {
     if (entity === 'certification') { const previous = this.getCertifications(); previous.forEach((value) => { if (!values.some((next) => next.id === value.id)) this.deleteCertification(value.id); }); values.forEach((value) => this.saveCertification(value as unknown as Certificate)); return; }
     if (entity === 'note') { const previous = this.getNotes(); previous.forEach((value) => { if (!values.some((next) => next.id === value.id)) this.deleteNote(value.id); }); values.forEach((value) => this.saveNote(value as unknown as Note)); return; }
     if (entity === 'connection') { this.saveConnections(values as unknown as ExternalConnection[]); return; }
+    if (entity === 'conversation') { this.saveConversations(values as unknown as NovaConversation[]); return; }
     if (entity === 'project') { this.saveProjects(values as unknown as CareerProject[]); return; }
     if (entity === 'goal') { this.saveGoals(values as unknown as CareerGoal[]); return; }
     if (entity === 'mission') { this.saveMissions(values as unknown as CareerMission[]); return; }

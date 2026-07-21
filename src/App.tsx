@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { User } from 'firebase/auth';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -8,6 +8,8 @@ import { useAppData } from './hooks/useAppData';
 import { CloudSyncService } from './services/cloud/CloudSyncService';
 import { SessionManager } from './services/auth/SessionManager';
 import { AuthService } from './services/auth/AuthService';
+import { dataService } from './services/dataService';
+import { setCareerDataUpdatedAt } from './utils/storage';
 
 // Component Imports
 import Sidebar from './components/Sidebar';
@@ -32,6 +34,7 @@ export default function App() {
   const [authBusy, setAuthBusy] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const cloudSync = useMemo(() => new CloudSyncService(), []);
+  const isClearingAccount = useRef(false);
 
   // Modular Theme & Data Hooks
   const { theme, toggleTheme } = useTheme();
@@ -67,7 +70,7 @@ export default function App() {
 
   const { totalXP, level, xpForCurrentLevel, xpProgress, streak } = gamification;
 
-  const syncAccount = useCallback(async (user: User) => { setSyncStatus(navigator.onLine ? 'syncing' : 'offline'); try { await cloudSync.sync(user.uid); setSyncStatus(navigator.onLine ? 'synced' : 'offline'); } catch { setSyncStatus('offline'); } }, [cloudSync]);
+  const syncAccount = useCallback(async (user: User) => { setSyncStatus(navigator.onLine ? 'syncing' : 'offline'); try { await cloudSync.sync(user.uid); setSyncStatus(navigator.onLine ? 'synced' : 'offline'); } catch (error) { console.error('CareerOS cloud sync failed.', error); setSyncStatus('offline'); } }, [cloudSync]);
   useEffect(() => new SessionManager().observe((user) => {
     setSessionUser(user);
     if (user) void syncAccount(user).finally(loadDatabase); else setSyncStatus('offline');
@@ -80,6 +83,7 @@ export default function App() {
   }, [sessionUser, syncAccount]);
   useEffect(() => {
     const syncAfterMutation = () => {
+      if (isClearingAccount.current) return;
       if (sessionUser) void syncAccount(sessionUser);
       else cloudSync.queueSync();
     };
@@ -103,13 +107,33 @@ export default function App() {
     setAuthError(null);
     try {
       await new AuthService().signOut();
+      isClearingAccount.current = true;
+      cloudSync.stop();
+      setSessionUser(null);
+      dataService.resetData();
+      setCareerDataUpdatedAt(new Date(0).toISOString());
+      loadDatabase();
+      setCurrentView('dashboard');
       setSyncStatus('offline');
     } catch (error) {
       setAuthError(getAuthErrorMessage(error));
     } finally {
+      isClearingAccount.current = false;
       setAuthBusy(false);
     }
   };
+
+  const resetCareerData = useCallback(async () => {
+    isClearingAccount.current = true;
+    try {
+      handleResetData();
+      if (sessionUser) await cloudSync.overwrite(sessionUser.uid);
+      else cloudSync.stop();
+      loadDatabase();
+    } finally {
+      isClearingAccount.current = false;
+    }
+  }, [cloudSync, handleResetData, loadDatabase, sessionUser]);
 
   const refreshAfterAction = () => {
     loadDatabase();
@@ -218,7 +242,7 @@ export default function App() {
             theme={theme}
             onToggleTheme={toggleTheme}
             onRefreshData={loadDatabase}
-            onResetData={handleResetData}
+            onResetData={resetCareerData}
             onLoadSeedData={handleLoadSeedData}
             authUser={sessionUser}
             syncStatus={syncStatus}
@@ -297,15 +321,17 @@ export default function App() {
         </AnimatePresence>
       </main>
 
-      {/* Floating Quick Action triggers (Quick Add Opportunity & AI Assistant) */}
-      <QuickAddModal theme={theme} onAddOpportunity={handleSaveOpportunity} />
-      <AIAssistant
-        theme={theme}
-        opportunities={opportunities}
-        progress={progressData}
-        timeline={timelineEntries}
-        onActionExecuted={refreshAfterAction}
-      />
+      {/* The dedicated Nova workspace owns its conversation controls. */}
+      {currentView !== 'nova' && <>
+        <QuickAddModal theme={theme} onAddOpportunity={handleSaveOpportunity} />
+        <AIAssistant
+          theme={theme}
+          opportunities={opportunities}
+          progress={progressData}
+          timeline={timelineEntries}
+          onActionExecuted={refreshAfterAction}
+        />
+      </>}
     </div>
   );
 }

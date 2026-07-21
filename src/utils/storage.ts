@@ -21,7 +21,13 @@ const KEYS = {
   NOTIFICATIONS: 'career_os_notifications',
   THEME: 'career_os_theme',
   CONNECTIONS: 'career_os_connections',
+  CONVERSATIONS: 'career_os_nova_conversations',
+  DATA_UPDATED_AT: 'career_os_data_updated_at',
 };
+
+export const getCareerDataUpdatedAt = (): string | null => localStorage.getItem(KEYS.DATA_UPDATED_AT);
+export const setCareerDataUpdatedAt = (updatedAt: string): void => localStorage.setItem(KEYS.DATA_UPDATED_AT, updatedAt);
+export const touchCareerDataUpdatedAt = (): void => setCareerDataUpdatedAt(new Date().toISOString());
 
 // Seed Data
 const SEED_OPPORTUNITIES: Opportunity[] = [
@@ -333,6 +339,9 @@ export const initializeStorage = (): void => {
   if (localStorage.getItem(KEYS.CONNECTIONS) === null) {
     localStorage.setItem(KEYS.CONNECTIONS, JSON.stringify([]));
   }
+  if (localStorage.getItem(KEYS.CONVERSATIONS) === null) {
+    localStorage.setItem(KEYS.CONVERSATIONS, JSON.stringify([]));
+  }
 };
 
 // Reset all storage data to empty arrays for a fresh user account
@@ -352,11 +361,13 @@ export const resetStorageData = (): void => {
   localStorage.setItem(KEYS.ACTIVITIES, JSON.stringify([]));
   localStorage.setItem(KEYS.NOTIFICATIONS, JSON.stringify([]));
   localStorage.setItem(KEYS.CONNECTIONS, JSON.stringify([]));
+  localStorage.setItem(KEYS.CONVERSATIONS, JSON.stringify([]));
   localStorage.setItem('career_os_dashboard_tasks', JSON.stringify([]));
   localStorage.setItem('career_os_opp_reminders', JSON.stringify({}));
   localStorage.setItem('career_os_user_name', 'Student');
   localStorage.setItem('career_os_user_school', 'Not Set');
   localStorage.setItem('career_os_user_grad', 'Not Set');
+  touchCareerDataUpdatedAt();
 };
 
 // Optionally load sample seed data if user requests it
@@ -368,6 +379,7 @@ export const loadSeedData = (): void => {
   localStorage.setItem(KEYS.NOTES, JSON.stringify(SEED_NOTES));
   localStorage.setItem(KEYS.ACTIVITIES, JSON.stringify(SEED_ACTIVITIES));
   localStorage.setItem(KEYS.NOTIFICATIONS, JSON.stringify(SEED_NOTIFICATIONS));
+  touchCareerDataUpdatedAt();
 };
 
 // Generic Load / Save Helpers
@@ -384,6 +396,7 @@ const loadData = <T>(key: string, defaultValue: T): T => {
 const saveData = <T>(key: string, data: T): void => {
   try {
     localStorage.setItem(key, JSON.stringify(data));
+    if (key !== KEYS.THEME) touchCareerDataUpdatedAt();
   } catch (e) {
     console.error(`Error saving key: ${key}`, e);
   }
