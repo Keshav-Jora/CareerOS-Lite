@@ -14,7 +14,11 @@ export class AnalyticsService {
 
   static track(event: AnalyticsEvent): void {
     try {
-      if (!AnalyticsConfig.enabled) return;
+      if (AnalyticsConfig.isDevelopment) console.info('[Analytics] track()', { event: event.event, feature: event.feature });
+      if (!AnalyticsConfig.enabled) {
+        if (AnalyticsConfig.isDevelopment) console.warn('[Analytics] Tracking is disabled. Set ENABLE_ANALYTICS=true and restart Vite.');
+        return;
+      }
       this.ensureSession();
       this.write(event);
     } catch (error) {
@@ -35,6 +39,7 @@ export class AnalyticsService {
       sessionId: this.session?.id ?? 'unavailable',
       metadata: this.safeMetadata(event.metadata),
     };
+    if (AnalyticsConfig.isDevelopment) console.info('[Analytics] dispatching write', { event: document.event, sessionId: document.sessionId, userId: document.userId });
     this.repository.write(document);
   }
 
