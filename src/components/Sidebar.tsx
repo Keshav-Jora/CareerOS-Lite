@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   LayoutDashboard,
@@ -58,8 +58,29 @@ export default function Sidebar({
 }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const notificationMenuRef = useRef<HTMLDivElement>(null);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
+
+  useEffect(() => {
+    const closeMenus = (event: MouseEvent) => {
+      if (!notificationMenuRef.current?.contains(event.target as Node)) setShowNotifications(false);
+      if (!profileMenuRef.current?.contains(event.target as Node)) setShowProfileMenu(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      setShowNotifications(false);
+      setShowProfileMenu(false);
+    };
+    document.addEventListener('mousedown', closeMenus);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('mousedown', closeMenus);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, []);
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -135,7 +156,7 @@ export default function Sidebar({
         </div>
 
         {/* Navigation Items */}
-        <nav className="px-4 space-y-1" aria-label="Main Navigation">
+        <nav className="px-4 space-y-1.5" aria-label="Main Navigation">
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = currentView === item.id;
@@ -147,7 +168,7 @@ export default function Sidebar({
                 onClick={() => onViewChange(item.id)}
                 aria-label={item.label}
                 aria-current={isActive ? 'page' : undefined}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
+                className={`w-full min-h-11 flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
                   isActive
                     ? theme === 'dark'
                       ? 'bg-indigo-600/15 text-indigo-300 border border-indigo-400/30 shadow-[0_8px_22px_-16px_rgba(129,140,248,0.9)]'
@@ -190,7 +211,7 @@ export default function Sidebar({
         {/* Toggle Theme / Notifications bar */}
         <div className="flex items-center justify-between gap-2">
           {/* Notifications */}
-          <div className="relative">
+          <div ref={notificationMenuRef} className="relative">
             <button
               type="button"
               id="notifications-panel-trigger"
@@ -198,7 +219,7 @@ export default function Sidebar({
               aria-label={`Notifications ${unreadCount > 0 ? `(${unreadCount} unread)` : ''}`}
               aria-expanded={showNotifications}
               aria-haspopup="true"
-              className={`p-2 rounded-lg border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
+              className={`min-h-11 min-w-11 p-2 rounded-xl border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
                 theme === 'dark'
                   ? 'bg-slate-900/50 border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800/50'
                   : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -285,7 +306,7 @@ export default function Sidebar({
             id="theme-toggle"
             onClick={onToggleTheme}
             aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-            className={`p-2 rounded-lg border flex-1 flex justify-center items-center gap-1.5 text-xs font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
+            className={`min-h-11 rounded-xl border flex-1 flex justify-center items-center gap-1.5 text-xs font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
               theme === 'dark'
                 ? 'bg-slate-900/50 border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800/50'
                 : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -306,12 +327,17 @@ export default function Sidebar({
         </div>
 
         {/* User Card */}
-        <div className="space-y-2">
-          <div
-            className={`flex items-center gap-3 p-2 rounded-xl border ${
+        <div ref={profileMenuRef} className="relative space-y-2">
+          <button
+            type="button"
+            onClick={() => setShowProfileMenu((open) => !open)}
+            aria-label="Open account menu"
+            aria-expanded={showProfileMenu}
+            aria-haspopup="menu"
+            className={`w-full min-h-14 flex items-center gap-3 p-2.5 rounded-xl border text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
               theme === 'dark'
-                ? 'bg-slate-900/40 border-slate-800/60'
-                : 'bg-slate-50/50 border-slate-200/60'
+                ? 'bg-slate-900/40 border-slate-800/60 hover:bg-slate-800/70'
+                : 'bg-slate-50/50 border-slate-200/60 hover:bg-slate-100'
             }`}
           >
             <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-slate-700">
@@ -333,7 +359,24 @@ export default function Sidebar({
                 <span className="text-[10px] font-medium text-slate-400 truncate">{userSchool} &apos;{userGrad.slice(-2)}</span>
               </motion.div>
             )}
-          </div>
+          </button>
+          <AnimatePresence>
+            {showProfileMenu && !isCollapsed && (
+              <motion.div
+                initial={{ opacity: 0, y: 6, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 6, scale: 0.98 }}
+                transition={{ duration: 0.16 }}
+                role="menu"
+                aria-label="Account menu"
+                className={`absolute bottom-full left-0 right-0 z-50 mb-2 rounded-xl border p-1.5 shadow-xl ${theme === 'dark' ? 'border-slate-700 bg-slate-900/95 text-slate-200' : 'border-slate-200 bg-white/95 text-slate-800'} backdrop-blur-xl`}
+              >
+                <button type="button" role="menuitem" onClick={() => { onViewChange('settings'); setShowProfileMenu(false); }} className="flex min-h-10 w-full items-center rounded-lg px-3 text-left text-xs font-semibold hover:bg-indigo-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+                  Account settings
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Gamification Panel in Sidebar */}
           {!isCollapsed && (

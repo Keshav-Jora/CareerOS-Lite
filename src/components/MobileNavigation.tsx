@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Home,
@@ -59,8 +59,26 @@ export default function MobileNavigation({
 }: MobileNavigationProps) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const notificationMenuRef = useRef<HTMLDivElement>(null);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
+
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      setIsDrawerOpen(false);
+      setShowNotifications(false);
+    };
+    const closeNotifications = (event: MouseEvent) => {
+      if (!notificationMenuRef.current?.contains(event.target as Node)) setShowNotifications(false);
+    };
+    document.addEventListener('keydown', closeOnEscape);
+    document.addEventListener('mousedown', closeNotifications);
+    return () => {
+      document.removeEventListener('keydown', closeOnEscape);
+      document.removeEventListener('mousedown', closeNotifications);
+    };
+  }, []);
 
   const menuItems = [
     { id: 'dashboard', label: 'Home Dashboard', icon: Home },
@@ -110,9 +128,11 @@ export default function MobileNavigation({
         }`}
       >
         {/* Brand */}
-        <div
+        <button
+          type="button"
           onClick={() => onViewChange('dashboard')}
-          className="flex items-center gap-2 cursor-pointer select-none"
+          aria-label="Open dashboard"
+          className="flex min-h-10 items-center gap-2 rounded-xl text-left cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
         >
           <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-tr from-indigo-600 to-purple-600 shadow-md">
             <Sparkles className="h-4 w-4 text-white animate-pulse" aria-hidden="true" />
@@ -125,7 +145,7 @@ export default function MobileNavigation({
               Lite
             </span>
           </div>
-        </div>
+        </button>
 
         {/* Action Cluster */}
         <div className="flex items-center gap-2">
@@ -137,7 +157,7 @@ export default function MobileNavigation({
           </div>
 
           {/* Notifications Button */}
-          <div className="relative">
+          <div ref={notificationMenuRef} className="relative">
             <button
               type="button"
               id="mobile-notifications-trigger"
