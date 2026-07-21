@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { GeminiService } from '../services/ai/GeminiService';
 import { RepositoryResponseService } from '../services/ai/RepositoryResponseService';
+import { RecommendationResponseService } from '../services/ai/RecommendationResponseService';
 import { ActionRouter } from '../services/actions/ActionRouter';
 import { NovaUnderstandingEngine } from '../services/ai/NovaUnderstandingEngine';
 import type { ActionPlan } from '../services/ai/understanding/ActionPlanBuilder';
@@ -17,6 +18,7 @@ export function useNovaChat(context: NovaChatContext, onActionExecuted?: () => v
   const actionRouter = useRef(new ActionRouter());
   const understandingEngine = useRef(new NovaUnderstandingEngine());
   const repositoryResponses = useRef(new RepositoryResponseService());
+  const recommendationResponses = useRef(new RecommendationResponseService());
   const pendingAction = useRef<{ plan: ActionPlan; expiresAt: number } | null>(null);
 
   useEffect(() => {
@@ -67,6 +69,16 @@ export function useNovaChat(context: NovaChatContext, onActionExecuted?: () => v
           id: `model-local-${Date.now()}`,
           role: 'model',
           text: repositoryResponse,
+          timestamp: new Date(),
+        }]);
+        return;
+      }
+      const recommendationResponse = recommendationResponses.current.respond(trimmedMessage);
+      if (recommendationResponse) {
+        setMessages((current) => [...current, {
+          id: `model-recommendation-${Date.now()}`,
+          role: 'model',
+          text: recommendationResponse,
           timestamp: new Date(),
         }]);
         return;
