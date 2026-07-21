@@ -87,7 +87,7 @@ export default function Sidebar({
   return (
     <motion.div
       animate={{ width: isCollapsed ? '80px' : '260px' }}
-      className={`relative h-screen flex flex-col justify-between border-r shrink-0 transition-colors duration-300 ${
+      className={`relative h-screen flex flex-col justify-between border-r shrink-0 transition-colors duration-200 ${
         theme === 'dark'
           ? 'glass-panel-dark border-slate-800 text-slate-200'
           : 'glass-panel-light border-slate-200 text-slate-800'
@@ -100,7 +100,7 @@ export default function Sidebar({
         id="sidebar-toggle"
         aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         aria-expanded={!isCollapsed}
-        className={`absolute top-6 -right-3 flex h-6 w-6 items-center justify-center rounded-full border shadow-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
+        className={`absolute top-6 -right-3 flex h-6 w-6 items-center justify-center rounded-full border shadow-md transition-all duration-200 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
           theme === 'dark'
             ? 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
             : 'bg-white border-slate-200 text-slate-500 hover:text-slate-900'
@@ -147,14 +147,14 @@ export default function Sidebar({
                 onClick={() => onViewChange(item.id)}
                 aria-label={item.label}
                 aria-current={isActive ? 'page' : undefined}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
                   isActive
                     ? theme === 'dark'
-                      ? 'bg-indigo-600/10 text-indigo-400 border border-indigo-500/20 shadow-sm'
-                      : 'bg-indigo-50 text-indigo-600 border border-indigo-100 shadow-sm'
+                      ? 'bg-indigo-600/15 text-indigo-300 border border-indigo-400/30 shadow-[0_8px_22px_-16px_rgba(129,140,248,0.9)]'
+                      : 'bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-[0_8px_22px_-16px_rgba(79,70,229,0.45)]'
                     : theme === 'dark'
-                    ? 'text-slate-400 hover:bg-slate-800/40 hover:text-slate-100 border border-transparent'
-                    : 'text-slate-600 hover:bg-slate-100/60 hover:text-slate-900 border border-transparent'
+                    ? 'text-slate-400 hover:-translate-y-px hover:bg-slate-800/60 hover:text-slate-100 hover:border-slate-700/70 border border-transparent'
+                    : 'text-slate-600 hover:-translate-y-px hover:bg-slate-100 hover:text-slate-900 hover:border-slate-200 border border-transparent'
                 }`}
               >
                 <Icon

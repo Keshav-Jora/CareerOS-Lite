@@ -22,6 +22,10 @@ export interface AppDatabasePayload {
   userGrad: string;
 }
 
+const notifyDataChanged = (): void => {
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('career-os-data-changed'));
+};
+
 /**
  * Data Service Abstraction Layer
  * Prepares architecture for future backend API calls (REST/Firebase/Supabase)
@@ -44,55 +48,67 @@ export const dataService = {
   // Opportunities
   saveOpportunity(opp: Opportunity): void {
     this.repository.saveOpportunity(opp);
+    notifyDataChanged();
   },
 
   deleteOpportunity(id: string): void {
     this.repository.deleteOpportunity(id);
+    notifyDataChanged();
   },
 
   // Timeline
   saveTimelineEntry(entry: TimelineEntry): void {
     this.repository.saveJourney(entry);
+    notifyDataChanged();
   },
 
   deleteTimelineEntry(id: string): void {
     this.repository.deleteJourney(id);
+    notifyDataChanged();
   },
 
   // Daily Progress
   updateDailyProgress(progress: DailyProgress): void {
     this.repository.saveProgress(progress);
+    notifyDataChanged();
   },
 
   // Certificates
   saveCertificate(cert: Certificate): void {
     this.repository.saveCertification(cert);
+    notifyDataChanged();
   },
 
   deleteCertificate(id: string): void {
     this.repository.deleteCertification(id);
+    notifyDataChanged();
   },
 
   // Notes
   saveNote(note: Note): void {
     this.repository.saveNote(note);
+    notifyDataChanged();
   },
 
   deleteNote(id: string): void {
     this.repository.deleteNote(id);
+    notifyDataChanged();
   },
 
   // Notifications
   markNotificationRead(id: string): void {
     this.repository.markNotificationRead(id);
+    notifyDataChanged();
   },
 
   // Account Reset / Seed Data
   resetData(): void {
     this.repository.reset();
+    notifyDataChanged();
   },
 
   loadSeedData(): void {
     this.repository.loadSeedData();
+    notifyDataChanged();
   },
 };

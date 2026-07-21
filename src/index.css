@@ -56,13 +56,14 @@
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     border: 1px solid rgba(63, 63, 70, 0.35);
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: background-color 200ms ease, border-color 200ms ease, box-shadow 200ms ease, transform 200ms ease;
   }
 
   .glass-card-dark:hover {
     background: rgba(30, 30, 35, 0.95);
     border-color: rgba(99, 102, 241, 0.4);
     box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.7);
+    transform: translateY(-2px);
   }
 
   .glass-card-light {
@@ -70,13 +71,27 @@
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     border: 1px solid rgba(15, 23, 42, 0.03);
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: background-color 200ms ease, border-color 200ms ease, box-shadow 200ms ease, transform 200ms ease;
   }
 
   .glass-card-light:hover {
     background: rgba(255, 255, 255, 0.8);
     border-color: rgba(15, 23, 42, 0.08);
     box-shadow: 0 10px 30px -10px rgba(15, 23, 42, 0.05);
+    transform: translateY(-2px);
+  }
+
+  button:not(:disabled) {
+    transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease, box-shadow 200ms ease, transform 200ms ease;
+  }
+
+  button:not(:disabled):active {
+    transform: translateY(1px);
+  }
+
+  button:focus-visible {
+    outline: 2px solid #818cf8;
+    outline-offset: 2px;
   }
 
   /* Glow effects */
@@ -116,6 +131,15 @@
   .typing-cursor {
     border-right: 2px solid currentColor;
     animation: blink 0.75s step-end infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, ::before, ::after {
+      animation-duration: 1ms !important;
+      animation-iteration-count: 1 !important;
+      scroll-behavior: auto !important;
+      transition-duration: 1ms !important;
+    }
   }
 
   /* Custom Markdown body styling */

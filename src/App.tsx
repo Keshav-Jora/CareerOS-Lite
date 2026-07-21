@@ -30,6 +30,7 @@ export default function App() {
   const [sessionUser, setSessionUser] = useState<User | null>(null);
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'offline'>('offline');
   const [authBusy, setAuthBusy] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
   const cloudSync = useMemo(() => new CloudSyncService(), []);
 
   // Modular Theme & Data Hooks
@@ -77,8 +78,38 @@ export default function App() {
     window.addEventListener('online', flushQueue);
     return () => window.removeEventListener('online', flushQueue);
   }, [sessionUser, syncAccount]);
-  const signIn = async () => { setAuthBusy(true); try { await new AuthService().signInWithGoogle(); } finally { setAuthBusy(false); } };
-  const signOut = async () => { setAuthBusy(true); try { await new AuthService().signOut(); setSyncStatus('offline'); } finally { setAuthBusy(false); } };
+  useEffect(() => {
+    const syncAfterMutation = () => {
+      if (sessionUser) void syncAccount(sessionUser);
+      else cloudSync.queueSync();
+    };
+    window.addEventListener('career-os-data-changed', syncAfterMutation);
+    return () => window.removeEventListener('career-os-data-changed', syncAfterMutation);
+  }, [cloudSync, sessionUser, syncAccount]);
+
+  const signIn = async () => {
+    setAuthBusy(true);
+    setAuthError(null);
+    try {
+      await new AuthService().signInWithGoogle();
+    } catch (error) {
+      setAuthError(getAuthErrorMessage(error));
+    } finally {
+      setAuthBusy(false);
+    }
+  };
+  const signOut = async () => {
+    setAuthBusy(true);
+    setAuthError(null);
+    try {
+      await new AuthService().signOut();
+      setSyncStatus('offline');
+    } catch (error) {
+      setAuthError(getAuthErrorMessage(error));
+    } finally {
+      setAuthBusy(false);
+    }
+  };
 
   const refreshAfterAction = () => {
     loadDatabase();
@@ -194,6 +225,7 @@ export default function App() {
             onSignIn={signIn}
             onSignOut={signOut}
             authBusy={authBusy}
+            authError={authError}
           />
         );
       default:
@@ -276,4 +308,16 @@ export default function App() {
       />
     </div>
   );
+}
+
+function getAuthErrorMessage(error: unknown): string {
+  const code = typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string'
+    ? error.code
+    : '';
+  if (code === 'auth/popup-closed-by-user') return 'Sign-in was cancelled. You can try again whenever you are ready.';
+  if (code === 'auth/popup-blocked') return 'Your browser blocked the Google sign-in window. Allow pop-ups for CareerOS and try again.';
+  if (code === 'auth/unauthorized-domain') return 'This site is not authorized for Google sign-in yet. Add its domain in Firebase Authentication settings.';
+  if (code === 'auth/operation-not-allowed') return 'Google sign-in is not enabled for this Firebase project yet.';
+  if (code === 'auth/network-request-failed') return 'CareerOS could not reach Google. Check your connection and try again.';
+  return 'Google sign-in could not be completed. Please try again or check the Firebase configuration.';
 }
