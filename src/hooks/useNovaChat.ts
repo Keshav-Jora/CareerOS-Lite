@@ -17,7 +17,7 @@ export function useNovaChat(context: NovaChatContext, onActionExecuted?: () => v
   const actionRouter = useRef(new ActionRouter());
   const understandingEngine = useRef(new NovaUnderstandingEngine());
   const repositoryResponses = useRef(new RepositoryResponseService());
-  const pendingAction = useRef<ActionPlan | null>(null);
+  const pendingAction = useRef<{ plan: ActionPlan; expiresAt: number } | null>(null);
 
   useEffect(() => {
     setMessages([{
@@ -45,9 +45,13 @@ export function useNovaChat(context: NovaChatContext, onActionExecuted?: () => v
       if (pendingAction.current && confirmation) {
         const pending = pendingAction.current;
         pendingAction.current = null;
+        if (pending.expiresAt < Date.now()) {
+          setMessages((current) => [...current, { id: `model-action-${Date.now()}`, role: 'model', text: 'That pending action expired. Please ask again and I’ll confirm it before making changes.', timestamp: new Date() }]);
+          return;
+        }
         const actionResult = confirmation === 'cancelled'
           ? { success: false, message: 'Cancelled. No changes were made.' }
-          : actionRouter.current.routePlan({ ...pending, requiresConfirmation: false });
+          : actionRouter.current.routePlan({ ...pending.plan, requiresConfirmation: false });
         if (actionResult.success) onActionExecuted?.();
         setMessages((current) => [...current, {
           id: `model-action-${Date.now()}`,
@@ -72,7 +76,10 @@ export function useNovaChat(context: NovaChatContext, onActionExecuted?: () => v
       if (isMutation) {
         const actionResult = actionRouter.current.routePlan(plan);
         if (actionResult.reason === 'confirmation-required' && plan.validation.valid) {
-          pendingAction.current = plan;
+          const target = actionResult.data && typeof actionResult.data === 'object' && 'id' in actionResult.data && typeof actionResult.data.id === 'string'
+            ? { id: actionResult.data.id }
+            : {};
+          pendingAction.current = { plan: { ...plan, payload: { ...plan.payload, ...target } }, expiresAt: Date.now() + 5 * 60_000 };
         }
         if (actionResult.success) onActionExecuted?.();
         const responseText = actionResult.reason === 'confirmation-required'

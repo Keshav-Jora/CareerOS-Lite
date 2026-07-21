@@ -23,9 +23,13 @@ export class ActionRouter {
   routePlan(plan: ActionPlan): ActionPlanExecutionResult {
     if (plan.entity === 'opportunity') logOpportunityDebug('ActionRouter', 'src/services/actions/ActionRouter.ts', 'routePlan', plan, undefined);
     if (!plan.validation.valid) return { success: false, entity: plan.entity, operation: plan.operation, message: 'Action plan validation failed.', reason: 'validation-failed', issues: plan.validation.issues };
-    if (plan.requiresConfirmation) return { success: false, entity: plan.entity, operation: plan.operation, message: 'Confirmation is required before this action can run.', reason: 'confirmation-required' };
     if (!plan.entity) return { success: false, entity: null, operation: plan.operation, message: 'No supported entity was detected.', reason: 'unsupported-operation' };
     const repository = dataService.repository; const entity = plan.entity as CanonicalEntity;
+    if (plan.requiresConfirmation) {
+      const targetId = plan.operation === 'delete' ? this.targetId(plan, entity) : undefined;
+      if (plan.operation === 'delete' && !targetId) return this.targetMissing(entity, plan.operation);
+      return { success: false, entity, operation: plan.operation, message: 'Confirmation is required before this action can run.', reason: 'confirmation-required', data: targetId ? { id: targetId } : undefined };
+    }
     const payload = plan.operation === 'create'
       ? this.payloadAdapter.normalize(entity, plan.payload)
       : this.updatePayload(plan.payload);

@@ -37,6 +37,8 @@ export class ExtractionService {
   private goalTitle(message: string): string | undefined {
     const labelled = this.label(message, ['title']);
     if (labelled) return labelled;
+    const natural = this.value(message, /\b(?:my goal is|i want|i aim to|my dream is|help me get)\s+([^\n.]+)/i);
+    if (natural) return natural.replace(/^to\s+/i, '').replace(/^an?\s+/i, '').replace(/^a\s+/i, '').replace(/^become\s+/i, '').replace(/\b(?:at|for)\s+$/i, '').replace(/\b\w/g, (letter) => letter.toUpperCase());
     const inline = this.value(message, /\b(?:create|add|update|modify|change|delete|remove|cancel)\s+(?:a\s+)?goal\s*[:\-]?\s*([^\n]+)/i);
     if (inline && !/^goal$/i.test(inline)) return inline;
     return message.split(/\r?\n/).map((line) => line.trim()).find((line) => line && !/^create\s+(?:a\s+)?goal\b/i.test(line));
@@ -46,16 +48,16 @@ export class ExtractionService {
     const tasks: string[] = [];
     let metadataStarted = false;
     for (const line of lines) {
-      if (!line || /^today'?s mission\b|^tasks\s*:?$/i.test(line)) continue;
-      if (/^(?:duration|estimated time|priority|notes)\s*:/i.test(line)) { metadataStarted = true; continue; }
+      if (!line || /^today'?s mission\b|^today i need to\b|^tasks\s*:?$/i.test(line)) continue;
+      if (/^(?:duration|estimated time|priority|notes)\s*:?/i.test(line)) { metadataStarted = true; continue; }
       if (!metadataStarted) tasks.push(line.replace(/^[-*]\s*/, ''));
     }
     const field = (labels: string[]) => {
-      const expression = new RegExp(`^\\s*(?:${labels.join('|')})\\s*:\\s*(.*)$`, 'i');
+      const expression = new RegExp(`^\\s*(?:${labels.join('|')})\\s*:?\\s*(.*)$`, 'i');
       for (let index = 0; index < lines.length; index += 1) {
         const match = lines[index].match(expression);
         if (!match) continue;
-        return match[1].trim() || lines.slice(index + 1).find((line) => line && !/^(?:duration|estimated time|priority|notes)\s*:/i.test(line));
+        return match[1].trim() || lines.slice(index + 1).find((line) => line && !/^(?:duration|estimated time|priority|notes)\s*:?/i.test(line));
       }
       return undefined;
     };
@@ -98,7 +100,7 @@ export class ExtractionService {
     const checklist = this.sectionArray(fields.checklist) ?? base.checklist;
     const tags = this.sectionArray(fields.tags, true) ?? base.tags;
     const portal = fields.portal ?? fields['application url'] ?? this.links(message)[0];
-    return { ...base, title: fields.title ?? fields.role ?? this.naturalOpportunityTitle(message) ?? this.title(message), organization: fields.company ?? fields.organization ?? fields.employer ?? this.naturalOrganization(message), category: this.normalizeCategory(fields.category) ?? this.category(message), source: fields.platform, priority: fields.priority ?? this.value(message, /\bpriority\s*(?:is\s*)?(high|medium|low)/i), status: fields.status, deadline: fields.deadline ? this.normalizeDate(fields.deadline) : this.dateAfter(message, /\bdeadline\s*(?:is|on|:)?\s*/i), skills, checklist, tags, eligibility: fields.eligibility, resumeVersion: fields.resume, applicationLink: portal, officialLink: portal, notes: fields['preparation notes'] ?? fields.notes };
+    return { ...base, title: fields.title ?? fields.role ?? this.naturalOpportunityTitle(message) ?? this.title(message), organization: fields.company ?? fields.organization ?? fields.employer ?? this.naturalOrganization(message), category: this.normalizeCategory(fields.category) ?? this.category(message), source: fields.platform, priority: this.normalizePriority(fields.priority) ?? this.priority(message), status: fields.status, deadline: fields.deadline ? this.normalizeDate(fields.deadline) : this.dateAfter(message, /\bdeadline\s*(?:is|on|:)?\s*/i), skills, checklist, tags, eligibility: fields.eligibility, resumeVersion: fields.resume, applicationLink: portal, officialLink: portal, notes: fields['preparation notes'] ?? fields.notes };
   }
   private naturalOpportunityTitle(message: string): string | undefined {
     const sentences = message.split(/\r?\n|(?<=[.!])\s+/).map((line) => line.trim()).filter(Boolean);
@@ -113,6 +115,8 @@ export class ExtractionService {
     const namedCompany = message.match(/\b(Google|Microsoft|Amazon|Meta|Apple|Netflix|Flipkart|Deloitte|Oracle|IBM)\b/i)?.[1];
     return namedCompany;
   }
+  private priority(message: string): string | undefined { return this.normalizePriority(this.value(message, /\b(?:priority\s*(?:is\s*)?|)(high|medium|low|urgent)\b/i) ?? (/\burgent\b/i.test(message) ? 'urgent' : undefined)); }
+  private normalizePriority(value: string | undefined): string | undefined { if (!value) return undefined; const normalized = value.trim().toLowerCase(); return normalized === 'urgent' || normalized === 'high' ? 'High' : normalized === 'medium' ? 'Medium' : normalized === 'low' ? 'Low' : undefined; }
   private sections(message: string): Record<string, string> {
     const labels = ['title', 'role', 'company', 'organization', 'category', 'platform', 'priority', 'status', 'deadline', 'skills', 'eligibility', 'checklist', 'resume', 'tags', 'portal', 'application url', 'preparation notes', 'notes'];
     const expression = new RegExp(`^\\s*(${labels.join('|')})\\s*:\\s*(.*)$`, 'i'); const result: Record<string, string> = {}; let active: string | undefined;

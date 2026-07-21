@@ -11,7 +11,8 @@ export class RepositoryResponseService {
     if (/^(hi|hello|hey|thanks|thank you|bye|good morning|good evening)[!. ]*$/i.test(value)) return this.smallTalk(value);
     if (/^(?:show|what(?:'s| is))\b.*\btoday'?s mission\b/i.test(value)) return this.mission(snapshot.missions);
     if (/\bwhat goals? am i working on\b|\bshow (?:my )?goals?\b/i.test(value)) return this.goals(snapshot.goals);
-    if (/\bsummarize (?:everything|my career|career)\b/i.test(value)) return this.summary(snapshot);
+    if (/\b(?:what goals? do i have|how many goals?)\b/i.test(value)) return this.goals(snapshot.goals);
+    if (/\b(?:summarize (?:everything|my career|career|my profile)|what do you know about me|what am i tracking|career summary)\b/i.test(value)) return this.summary(snapshot);
     if (/\bclosest deadline\b|\bdeadline is closest\b/i.test(value)) return this.closestDeadline(snapshot.opportunities);
     if (/\bhow many opportunities\b|\bopportunity count\b/i.test(value)) return `You currently have **${snapshot.opportunities.length} ${snapshot.opportunities.length === 1 ? 'opportunity' : 'opportunities'}** tracked.`;
     if (/\bwhat certifications? do i have\b|\bshow (?:my )?certifications?\b/i.test(value)) return this.certifications(snapshot.certifications, snapshot.journey);

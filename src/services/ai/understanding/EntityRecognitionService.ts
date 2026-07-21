@@ -25,11 +25,11 @@ export class EntityRecognitionService {
       const result = { entity: null, confidence: 'low' } as const;
       return result;
     }
-    if (/\b(?:my goal is|i want (?:a|an|to become|to work at)|help me track .*goal|track my .*goal)\b/i.test(message)) {
+    if (/\b(?:my goal is|i want (?:a|an|to become|to work at)|i aim to|my dream is|help me (?:track|get)|track my .*goal)\b/i.test(message)) {
       const result: EntityDetection = { entity: 'goal', confidence: 'high' };
       return result;
     }
-    if (/\b(?:i need to do .*today|today'?s tasks? are|help me plan today)\b/i.test(message)) {
+    if (/\b(?:today i need to|i need to do .*today|today'?s tasks? are|help me plan today)\b/i.test(message)) {
       const result: EntityDetection = { entity: 'mission', confidence: 'high' };
       return result;
     }
