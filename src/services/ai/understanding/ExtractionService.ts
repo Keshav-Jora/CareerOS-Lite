@@ -13,7 +13,7 @@ export class ExtractionService {
     if (entity === 'project') return { ...base, title: this.title(message), description: this.value(message, /\bdescription\s*[:\-]?\s*([^\n]+)/i), technologies: this.skills(message), status: this.status(message), repository: this.links(message).find((link) => /github\.com/i.test(link)), demo: this.links(message).find((link) => !/github\.com/i.test(link)) };
     if (entity === 'goal') return { title: this.goalTitle(message), targetDate: this.dateAfter(message, /\b(?:by|target date|deadline)\s*(?:is|on|:)?\s*/i), priority: this.value(message, /\bpriority\s*[:\-]?\s*(high|medium|low)/i), notes: this.value(message, /\bnotes?\s*[:\-]?\s*([^\n]+)/i) };
     if (entity === 'skill') return { name: this.value(message, /\b(?:add|learn|skill)\s+([A-Za-z0-9.+#-]+)/i) ?? this.skills(message)[0], level: this.value(message, /\b(beginner|intermediate|advanced)\b/i) };
-    if (entity === 'mission') return { ...this.mission(message, base), tasks: this.missionTasks(message) };
+    if (entity === 'mission') return this.parsedMission(message, base);
     if (entity === 'journey') return this.journey(message);
     return { ...base, title: this.title(message) };
   }
@@ -32,9 +32,67 @@ export class ExtractionService {
   private goalTitle(message: string): string | undefined {
     const labelled = this.label(message, ['title']);
     if (labelled) return labelled;
-    const inline = this.value(message, /\bcreate\s+(?:a\s+)?goal\s*[:\-]?\s*([^\n]+)/i);
+    const inline = this.value(message, /\b(?:create|add|update|modify|change|delete|remove|cancel)\s+(?:a\s+)?goal\s*[:\-]?\s*([^\n]+)/i);
     if (inline && !/^goal$/i.test(inline)) return inline;
     return message.split(/\r?\n/).map((line) => line.trim()).find((line) => line && !/^create\s+(?:a\s+)?goal\b/i.test(line));
+  }
+  private parsedMission(message: string, base: ExtractedPayload): ExtractedPayload {
+    const lines = message.split(/\r?\n/).map((line) => line.trim());
+    const tasks: string[] = [];
+    let metadataStarted = false;
+    for (const line of lines) {
+      if (!line || /^today'?s mission\b|^tasks\s*:?$/i.test(line)) continue;
+      if (/^(?:duration|estimated time|priority|notes)\s*:/i.test(line)) { metadataStarted = true; continue; }
+      if (!metadataStarted) tasks.push(line.replace(/^[-*]\s*/, ''));
+    }
+    const field = (labels: string[]) => {
+      const expression = new RegExp(`^\\s*(?:${labels.join('|')})\\s*:\\s*(.*)import type { ActionIntent } from './IntentService';
+import type { ActionEntity } from './EntityRecognitionService';
+
+export type ExtractedPayload = Record<string, unknown>;
+const knownSkills = ['DSA', 'SQL', 'React', 'Docker', 'AWS', 'TypeScript', 'JavaScript', 'Python', 'Java', 'Node.js', 'Git', 'Cloud'];
+
+/** Pure, entity-scoped natural-language extraction. Validation and persistence are separate stages. */
+export class ExtractionService {
+  extract(message: string, _intent: ActionIntent | null, entity: ActionEntity | null): ExtractedPayload {
+    if (!entity) return {};
+    const base = { skills: this.skills(message), links: this.links(message), tags: this.tags(message), checklist: this.checklist(message) };
+    if (entity === 'opportunity') return this.opportunity(message, base);
+    if (entity === 'project') return { ...base, title: this.title(message), description: this.value(message, /\bdescription\s*[:\-]?\s*([^\n]+)/i), technologies: this.skills(message), status: this.status(message), repository: this.links(message).find((link) => /github\.com/i.test(link)), demo: this.links(message).find((link) => !/github\.com/i.test(link)) };
+    if (entity === 'goal') return { title: this.goalTitle(message), targetDate: this.dateAfter(message, /\b(?:by|target date|deadline)\s*(?:is|on|:)?\s*/i), priority: this.value(message, /\bpriority\s*[:\-]?\s*(high|medium|low)/i), notes: this.value(message, /\bnotes?\s*[:\-]?\s*([^\n]+)/i) };
+    if (entity === 'skill') return { name: this.value(message, /\b(?:add|learn|skill)\s+([A-Za-z0-9.+#-]+)/i) ?? this.skills(message)[0], level: this.value(message, /\b(beginner|intermediate|advanced)\b/i) };
+    if (entity === 'mission') return this.parsedMission(message, base);
+    if (entity === 'journey') return this.journey(message);
+    return { ...base, title: this.title(message) };
+  }
+
+  private title(message: string): string | undefined { return this.label(message, ['title']) ?? this.value(message, /\b(?:add|create|update|delete|remove|archive|registered for|track)\s+(?!a new opportunity\b|new opportunity\b|opportunity\b|project\b)([^\n.]+)/i); }
+  private mission(message: string, base: ExtractedPayload): ExtractedPayload {
+    return { ...base, title: "Today's Mission", tasks: this.bullets(this.section(message, 'tasks') ?? message), duration: this.value(message, /\b(?:duration|estimated time)\s*:\s*([^\n]+)/i), priority: this.value(message, /\bpriority\s*:\s*(high|medium|low)/i) };
+  }
+  private missionTasks(message: string): string[] {
+    const bullets = this.bullets(this.section(message, 'tasks') ?? message);
+    if (bullets.length) return bullets;
+    return message.split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line && !/^today'?s mission\b|^tasks\b|^(?:duration|estimated time|priority)\s*:/i.test(line));
+  }
+  private goalTitle(message: string): string | undefined {
+    const labelled = this.label(message, ['title']);
+    if (labelled) return labelled;
+    const inline = this.value(message, /\b(?:create|add|update|modify|change|delete|remove|cancel)\s+(?:a\s+)?goal\s*[:\-]?\s*([^\n]+)/i);
+    if (inline && !/^goal$/i.test(inline)) return inline;
+    return message.split(/\r?\n/).map((line) => line.trim()).find((line) => line && !/^create\s+(?:a\s+)?goal\b/i.test(line));
+  }
+, 'i');
+      for (let index = 0; index < lines.length; index += 1) {
+        const match = lines[index].match(expression);
+        if (!match) continue;
+        return match[1].trim() || lines.slice(index + 1).find((line) => line && !/^(?:duration|estimated time|priority|notes)\s*:/i.test(line));
+      }
+      return undefined;
+    };
+    return { ...base, title: "Today's Mission", tasks, duration: field(['duration', 'estimated time']), priority: field(['priority']), notes: field(['notes']) };
   }
   private journey(message: string): ExtractedPayload {
     const title = message

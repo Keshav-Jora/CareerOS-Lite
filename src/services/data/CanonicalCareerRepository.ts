@@ -30,6 +30,14 @@ export class CanonicalCareerRepository {
   get<T extends CanonicalRecord>(entity: CanonicalEntity, id: string): T | null { return this.getAll<T>(entity).find((value) => value.id === id) ?? null; }
   getAll<T extends CanonicalRecord>(entity: CanonicalEntity): T[] { return this.collection(entity) as T[]; }
   search<T extends CanonicalRecord>(entity: CanonicalEntity, query: string): T[] { const normalized = query.trim().toLowerCase(); return this.getAll<T>(entity).filter((value) => JSON.stringify(value).toLowerCase().includes(normalized)); }
+  getStatistics(entity: CanonicalEntity): { total: number; active: number; completed: number } {
+    const values = this.getAll<Record<string, unknown> & CanonicalRecord>(entity);
+    return {
+      total: values.length,
+      active: values.filter((value) => value.status === 'active' || value.status === 'open').length,
+      completed: values.filter((value) => value.status === 'completed' || value.status === 'Completed').length,
+    };
+  }
   getSnapshot(): CanonicalCareerData {
     const legacy = this.getLegacySnapshot(); const now = new Date().toISOString();
     const goals = this.migrateGoals(read<CareerGoal[]>(KEYS.goals, []), read<Task[]>(KEYS.tasks, []), now);

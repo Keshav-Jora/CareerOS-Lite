@@ -43,10 +43,10 @@ export class ActionRouter {
         };
       }
       const data = repository.create(entity, payload as never);
-      return repository.get(entity, data.id) ? this.planSuccess(entity, plan.operation, 'Created successfully.', data) : { success: false, entity, operation: plan.operation, message: 'Persistence verification failed.' };
+      return repository.get(entity, data.id) ? this.planSuccess(entity, plan.operation, this.createdMessage(entity, data), data) : { success: false, entity, operation: plan.operation, message: 'CareerOS could not verify that item was saved.' };
     }
-    if (plan.operation === 'update') { const id = this.targetId(plan, entity); if (!id) return this.targetMissing(entity, plan.operation); const data = repository.update(entity, id, payload as never); return data && repository.get(entity, id) ? this.planSuccess(entity, plan.operation, 'Updated successfully.', data) : this.targetMissing(entity, plan.operation); }
-    if (plan.operation === 'delete') { const id = this.targetId(plan, entity); if (!id) return this.targetMissing(entity, plan.operation); return repository.delete(entity, id) ? this.planSuccess(entity, plan.operation, 'Deleted successfully.') : this.targetMissing(entity, plan.operation); }
+    if (plan.operation === 'update') { const id = this.targetId(plan, entity); if (!id) return this.targetMissing(entity, plan.operation); const current = repository.get<Record<string, unknown> & { id: string }>(entity, id); const data = repository.update(entity, id, payload as never); return data && repository.get(entity, id) ? this.planSuccess(entity, plan.operation, this.updatedMessage(entity, current ?? {}, data), data) : this.targetMissing(entity, plan.operation); }
+    if (plan.operation === 'delete') { const id = this.targetId(plan, entity); if (!id) return this.targetMissing(entity, plan.operation); const current = repository.get<Record<string, unknown> & { id: string }>(entity, id); return repository.delete(entity, id) ? this.planSuccess(entity, plan.operation, this.deletedMessage(entity, current ?? {}, repository.getAll(entity).length)) : this.targetMissing(entity, plan.operation); }
     if (plan.operation === 'archive' || plan.operation === 'restore' || plan.operation === 'complete') { const id = this.targetId(plan, entity); if (!id) return this.targetMissing(entity, plan.operation); const status = plan.operation === 'archive' ? 'archived' : plan.operation === 'restore' ? 'active' : 'completed'; const data = repository.update(entity, id, { status } as never); return data ? this.planSuccess(entity, plan.operation, `${plan.operation} successfully.`, data) : this.targetMissing(entity, plan.operation); }
     const query = typeof plan.payload.query === 'string' ? plan.payload.query : plan.sourceMessage;
     const data = plan.intent === 'search' ? repository.search(entity, query) : repository.getAll(entity);
@@ -189,6 +189,27 @@ export class ActionRouter {
   }
   private updatePayload(payload: Record<string, unknown>): Record<string, unknown> {
     return Object.fromEntries(Object.entries(payload).filter(([, value]) => value !== undefined && (!Array.isArray(value) || value.length > 0)));
+  }
+  private createdMessage(entity: CanonicalEntity, data: Record<string, unknown>): string {
+    const title = this.recordTitle(data, entity);
+    if (entity === 'opportunity') return `**${title}** added.${data.deadline ? `\n\nDeadline: ${data.deadline}` : ''}${data.priority ? `\nPriority: ${data.priority}` : ''}`;
+    if (entity === 'goal') return `Goal **${title}** added.`;
+    if (entity === 'mission') return `Today's mission added with ${Array.isArray(data.tasks) ? data.tasks.length : 0} tasks.`;
+    return `**${title}** added to your ${entity} records.`;
+  }
+  private updatedMessage(entity: CanonicalEntity, before: Record<string, unknown>, after: Record<string, unknown>): string {
+    const changes = Object.keys(after).filter((key) => key !== 'id' && key !== 'updatedAt' && JSON.stringify(before[key]) !== JSON.stringify(after[key]));
+    const details = changes.map((key) => `${key}: ${String(after[key])}`).join(', ');
+    return `Updated **${this.recordTitle(after, entity)}**${details ? ` ? ${details}.` : '.'}`;
+  }
+  private deletedMessage(entity: CanonicalEntity, data: Record<string, unknown>, remaining: number): string {
+    const title = this.recordTitle(data, entity);
+    return entity === 'opportunity' ? `Removed **${title}** successfully. Remaining opportunities: ${remaining}.` : `Removed **${title}** successfully.`;
+  }
+  private recordTitle(data: Record<string, unknown>, entity: CanonicalEntity): string {
+    if (typeof data.title === 'string') return data.title;
+    if (typeof data.name === 'string') return data.name;
+    return entity === 'mission' ? "Today's Mission" : entity;
   }
   private targetMissing(entity: CanonicalEntity, operation: ActionOperation): ActionPlanExecutionResult { return { success: false, entity, operation, message: `I could not find that ${entity}. Please include its title${entity === 'opportunity' ? ' and company if there are duplicates' : ''}.`, reason: 'target-not-found' }; }
   private planSuccess(entity: CanonicalEntity, operation: ActionOperation, message: string, data?: unknown): ActionPlanExecutionResult { return { success: true, entity, operation, message, data }; }

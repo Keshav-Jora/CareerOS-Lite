@@ -6,7 +6,7 @@ export interface IntentDetection { intent: ActionIntent | null; confidence: Inte
 interface IntentPattern { intent: ActionIntent; weight: number; expression: RegExp; }
 
 const patterns: IntentPattern[] = [
-  { intent: 'delete', weight: 3, expression: /\b(delete|remove|discard)\b/i },
+  { intent: 'delete', weight: 3, expression: /\b(delete|remove|discard|cancel)\b/i },
   { intent: 'archive', weight: 3, expression: /\barchive\b/i },
   { intent: 'restore', weight: 3, expression: /\b(restore|unarchive|bring back)\b/i },
   { intent: 'complete', weight: 3, expression: /\b(complete|finish|mark done|mark as done)\b/i },
@@ -16,8 +16,8 @@ const patterns: IntentPattern[] = [
   { intent: 'show', weight: 3, expression: /\b(show|list|display|view)\b/i },
   { intent: 'search', weight: 2, expression: /\b(search|find|look for)\b/i },
   { intent: 'prioritize', weight: 2, expression: /\b(prioritize|priority|focus on)\b/i },
-  { intent: 'update', weight: 2, expression: /\b(update|change|move|set|edit)\b/i },
-  { intent: 'create', weight: 2, expression: /\b(add|create|new|register|track)\b/i },
+  { intent: 'update', weight: 2, expression: /\b(update|change|move|set|edit|modify)\b/i },
+  { intent: 'create', weight: 2, expression: /\b(add|create|new|register|track|save)\b/i },
 ];
 
 /** Detects the requested operation only; entity extraction belongs to a later stage. */

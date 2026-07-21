@@ -15,7 +15,10 @@ const categoryList = [...categories].join(', ');
 export class ValidationService {
   validate(intent: ActionIntent | null, entity: ActionEntity | null, payload: ExtractedPayload): ActionValidation {
     const issues: ActionValidationIssue[] = [];
-    if (!entity || !intent) return { valid: false, normalized: false, issues: [{ code: 'unsupported', message: 'Intent and entity are required.' }] };
+    if (!entity || !intent) {
+      const action = intent === 'delete' ? 'delete' : intent === 'update' ? 'update' : 'complete';
+      return { valid: false, normalized: false, issues: [{ code: 'unsupported', message: `I couldn't determine which item you want to ${action}. Please specify its title.` }] };
+    }
     if (['create', 'update'].includes(intent) && ['opportunity', 'project', 'goal', 'skill'].includes(entity) && !this.text(payload.title ?? payload.name)) issues.push({ field: 'title', code: 'required', message: 'A title is required.' });
     this.date(payload, 'deadline', issues); this.date(payload, 'applicationDate', issues); this.date(payload, 'targetDate', issues);
     this.enum(payload, 'priority', priorities, issues); this.enum(payload, 'status', statuses, issues); this.category(payload, issues);
