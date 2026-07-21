@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Award, Plus, X, Upload, Calendar, Compass, ShieldAlert, Eye, Trash2, Sparkles, ShieldCheck, Lock, Unlock, Zap } from 'lucide-react';
 import { Certificate } from '../types';
+import EmptyState from './EmptyState';
 
 interface CertificatesViewProps {
   theme: 'light' | 'dark';
@@ -293,15 +294,14 @@ export default function CertificatesView({
 
       {/* Gallery Grid */}
       {certificates.length === 0 ? (
-        <div className={`p-10 rounded-2xl border text-center ${theme === 'dark' ? 'glass-panel-dark' : 'glass-panel-light'}`}>
-          <div className="h-12 w-12 bg-slate-800/40 rounded-xl flex items-center justify-center mx-auto mb-3">
-            <Award className="h-5 w-5 text-slate-500" />
-          </div>
-          <h4 className="font-bold text-sm text-slate-200">No certificates logged yet</h4>
-          <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">
-            Register your Coursera, AWS, or hackathon certifications with images/PDF uploads. Your achievements represent critical leverage for applications!
-          </p>
-        </div>
+        <EmptyState
+          icon={Award}
+          title="No certificates yet"
+          description="Add a course, credential, or competition certificate to showcase the achievements that strengthen your career profile."
+          theme={theme}
+          actionLabel="Add certificate"
+          onAction={() => setIsFormOpen(true)}
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {certificates.map((cert) => (

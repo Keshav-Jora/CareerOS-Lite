@@ -36,6 +36,7 @@ import {
 import confetti from 'canvas-confetti';
 import { Opportunity, CategoryType, StatusType, PriorityType } from '../types';
 import { logOpportunityDebug } from '../utils/opportunityDebug';
+import EmptyState from './EmptyState';
 
 interface OpportunitiesViewProps {
   theme: 'light' | 'dark';
@@ -783,19 +784,14 @@ export default function OpportunitiesView({
 
       {/* Cards Grid */}
       {filteredOpps.length === 0 ? (
-        <div
-          className={`p-10 rounded-2xl border text-center ${
-            theme === 'dark' ? 'glass-panel-dark' : 'glass-panel-light'
-          }`}
-        >
-          <div className="h-12 w-12 bg-slate-800/40 rounded-xl flex items-center justify-center mx-auto mb-3">
-            <Filter className="h-5 w-5 text-slate-500" />
-          </div>
-          <h4 className="font-bold text-sm text-slate-200">No opportunities match criteria</h4>
-          <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">
-            Try pasting an opportunity URL in the Smart Opportunity Capture box above or click "New Opportunity".
-          </p>
-        </div>
+        <EmptyState
+          icon={Filter}
+          title="No opportunities to show"
+          description="Add an internship, job, or program to track its deadline and give Nova more context for recommendations."
+          theme={theme}
+          actionLabel="Add opportunity"
+          onAction={() => setIsFormOpen(true)}
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <AnimatePresence mode="popLayout">
@@ -1069,11 +1065,14 @@ export default function OpportunitiesView({
         {/* Opportunities Cards List */}
         <div className="space-y-4">
           {filteredOpps.length === 0 ? (
-            <div className={`p-8 rounded-2xl border text-center ${theme === 'dark' ? 'glass-panel-dark' : 'glass-panel-light'}`}>
-              <Filter className="h-8 w-8 text-slate-500 mx-auto mb-2" />
-              <p className="text-xs font-bold text-slate-300">No matching opportunities</p>
-              <p className="text-[11px] text-slate-500 mt-1">Tap "New" to capture a target role.</p>
-            </div>
+            <EmptyState
+              icon={Filter}
+              title="No opportunities to show"
+              description="Add an internship, job, or program to track its deadline and give Nova more context for recommendations."
+              theme={theme}
+              actionLabel="Add opportunity"
+              onAction={() => setIsFormOpen(true)}
+            />
           ) : (
             filteredOpps.map((opp) => {
               const deadlineDate = new Date(opp.deadline);

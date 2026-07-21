@@ -22,6 +22,7 @@ import {
   BookOpen,
 } from 'lucide-react';
 import { Note } from '../types';
+import EmptyState from './EmptyState';
 
 interface NotesViewProps {
   theme: 'light' | 'dark';
@@ -347,7 +348,16 @@ export default function NotesView({ theme, notes, onSaveNote, onDeleteNote }: No
               )}
 
               {otherNotes.length === 0 && pinnedNotes.length === 0 ? (
-                <p className="text-center text-slate-500 text-xs py-8">No matching notes.</p>
+                <div className="px-2 py-3">
+                  <EmptyState
+                    icon={FileText}
+                    title="No notes yet"
+                    description="Capture ideas, interview prep, and career research so they are ready when you need them."
+                    theme={theme}
+                    actionLabel="Create note"
+                    onAction={handleCreateNote}
+                  />
+                </div>
               ) : (
                 otherNotes.map((note) => (
                   <button
@@ -680,10 +690,14 @@ export default function NotesView({ theme, notes, onSaveNote, onDeleteNote }: No
               </span>
 
               {otherNotes.length === 0 && pinnedNotes.length === 0 ? (
-                <div className={`p-8 rounded-2xl border text-center ${theme === 'dark' ? 'glass-panel-dark' : 'glass-panel-light'} space-y-2`}>
-                  <FileText className="h-8 w-8 text-slate-600 mx-auto" />
-                  <p className="text-xs font-semibold text-slate-400">No matching documents found</p>
-                </div>
+                <EmptyState
+                  icon={FileText}
+                  title="No notes yet"
+                  description="Capture ideas, interview prep, and career research so they are ready when you need them."
+                  theme={theme}
+                  actionLabel="Create note"
+                  onAction={handleCreateNote}
+                />
               ) : (
                 <div className="space-y-2.5">
                   {otherNotes.map((note) => (

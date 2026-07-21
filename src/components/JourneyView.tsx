@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { TimelineEntry } from '../types';
 import { useJourneyMemory } from '../hooks/useJourneyMemory';
+import EmptyState from './EmptyState';
 
 interface JourneyViewProps {
   theme: 'light' | 'dark';
@@ -171,15 +172,14 @@ export default function JourneyView({
 
         {/* Vertical Animated Timeline */}
         {timelineEntries.length === 0 ? (
-          <div className={`p-10 rounded-2xl border text-center ${theme === 'dark' ? 'glass-panel-dark' : 'glass-panel-light'}`}>
-            <div className="h-12 w-12 bg-slate-800/40 rounded-xl flex items-center justify-center mx-auto mb-3">
-              <Milestone className="h-5 w-5 text-slate-500" />
-            </div>
-            <h4 className="font-bold text-sm text-slate-200">Your Journey begins today!</h4>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">
-              Keep an active log of what you study, design, build, and earn. Your timeline entries will stack chronologically.
-            </p>
-          </div>
+          <EmptyState
+            icon={Milestone}
+            title="Your career journey starts here"
+            description="Log a milestone, project, learning moment, or certification to build a clear record of how your career is evolving."
+            theme={theme}
+            actionLabel="Log first milestone"
+            onAction={() => setIsOpenForm(true)}
+          />
         ) : (
           <div className="relative pl-6 md:pl-28 space-y-8 before:absolute before:left-[11px] before:md:left-[108px] before:top-4 before:bottom-4 before:w-0.5 before:bg-slate-800">
             {timelineEntries.map((entry, idx) => (
@@ -440,22 +440,14 @@ export default function JourneyView({
 
         {/* Mobile Vertical Stacked Timeline Cards (Increased spacing & high readability) */}
         {timelineEntries.length === 0 ? (
-          <div className={`p-8 rounded-2xl border text-center ${theme === 'dark' ? 'glass-panel-dark' : 'glass-panel-light'} space-y-3`}>
-            <div className="h-12 w-12 bg-slate-800/40 rounded-xl flex items-center justify-center mx-auto">
-              <Milestone className="h-6 w-6 text-slate-500" />
-            </div>
-            <h4 className="font-bold text-sm text-slate-200">Your Journey begins today!</h4>
-            <p className="text-xs text-slate-400 max-w-xs mx-auto leading-relaxed">
-              Keep an active log of what you study, design, build, and earn. Entries stack vertically in chronological order.
-            </p>
-            <button
-              type="button"
-              onClick={() => setIsOpenForm(true)}
-              className="py-3 px-4 rounded-xl bg-indigo-600 text-white font-bold text-xs inline-flex items-center gap-1.5 min-h-[44px] cursor-pointer"
-            >
-              <Plus className="h-4 w-4" /> Log First Milestone
-            </button>
-          </div>
+          <EmptyState
+            icon={Milestone}
+            title="Your career journey starts here"
+            description="Log a milestone, project, learning moment, or certification to build a clear record of how your career is evolving."
+            theme={theme}
+            actionLabel="Log first milestone"
+            onAction={() => setIsOpenForm(true)}
+          />
         ) : (
           <div className="space-y-6">
             {timelineEntries.map((entry, idx) => (
@@ -905,15 +897,14 @@ export default function JourneyView({
 
       {/* Vertical Animated Timeline */}
       {timelineEntries.length === 0 ? (
-        <div className={`p-10 rounded-2xl border text-center ${theme === 'dark' ? 'glass-panel-dark' : 'glass-panel-light'}`}>
-          <div className="h-12 w-12 bg-slate-800/40 rounded-xl flex items-center justify-center mx-auto mb-3">
-            <Milestone className="h-5 w-5 text-slate-500" />
-          </div>
-          <h4 className="font-bold text-sm text-slate-200">Your Journey begins today!</h4>
-          <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">
-            Keep an active log of what you study, design, build, and earn. Your timeline entries will stack chronologically.
-          </p>
-        </div>
+        <EmptyState
+          icon={Milestone}
+          title="Your career journey starts here"
+          description="Log a milestone, project, learning moment, or certification to build a clear record of how your career is evolving."
+          theme={theme}
+          actionLabel="Log first milestone"
+          onAction={() => setIsOpenForm(true)}
+        />
       ) : (
         <div className="relative pl-6 md:pl-28 space-y-8 before:absolute before:left-[11px] before:md:left-[108px] before:top-4 before:bottom-4 before:w-0.5 before:bg-slate-800">
           {timelineEntries.map((entry, idx) => (

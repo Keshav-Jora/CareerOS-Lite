@@ -37,6 +37,7 @@ import {
   Radar,
 } from 'recharts';
 import { DailyProgress } from '../types';
+import EmptyState from './EmptyState';
 
 interface ProgressViewProps {
   theme: 'light' | 'dark';
@@ -577,19 +578,28 @@ export default function ProgressView({
             <p className="text-[11px] text-slate-500">Compares daily coding hours, DSA questions and project logs.</p>
           </div>
 
-          <div className="h-72 w-full text-xs">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={weeklyChartData} margin={{ top: 10, right: 5, left: -25, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#1e293b' : '#e2e8f0'} opacity={0.4} vertical={false} />
-                <XAxis dataKey="name" stroke="#64748b" tickLine={false} axisLine={false} />
-                <YAxis stroke="#64748b" tickLine={false} axisLine={false} />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="hours" name="Coding Hours" fill="#6366f1" radius={[4, 4, 0, 0]} barSize={12} />
-                <Bar dataKey="dsa" name="DSA Solved" fill="#a855f7" radius={[4, 4, 0, 0]} barSize={12} />
-                <Bar dataKey="projects" name="Project Hours" fill="#ec4899" radius={[4, 4, 0, 0]} barSize={12} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          {progressData.length === 0 ? (
+            <EmptyState
+              icon={BarChart3}
+              title="No progress history yet"
+              description="Log your first practice session to see your weekly learning activity here."
+              theme={theme}
+            />
+          ) : (
+            <div className="h-72 w-full text-xs">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={weeklyChartData} margin={{ top: 10, right: 5, left: -25, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#1e293b' : '#e2e8f0'} opacity={0.4} vertical={false} />
+                  <XAxis dataKey="name" stroke="#64748b" tickLine={false} axisLine={false} />
+                  <YAxis stroke="#64748b" tickLine={false} axisLine={false} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar dataKey="hours" name="Coding Hours" fill="#6366f1" radius={[4, 4, 0, 0]} barSize={12} />
+                  <Bar dataKey="dsa" name="DSA Solved" fill="#a855f7" radius={[4, 4, 0, 0]} barSize={12} />
+                  <Bar dataKey="projects" name="Project Hours" fill="#ec4899" radius={[4, 4, 0, 0]} barSize={12} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
 
         {/* Skill Balance Radar Chart */}
@@ -599,22 +609,31 @@ export default function ProgressView({
             <p className="text-[11px] text-slate-500">Live shape representation of core skill disciplines (Max 99%).</p>
           </div>
 
-          <div className="h-72 w-full text-xs flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
-              <RadarChart cx="50%" cy="50%" outerRadius="70%" data={skillRadarData}>
-                <PolarGrid stroke={theme === 'dark' ? '#334155' : '#cbd5e1'} strokeDasharray="4 4" />
-                <PolarAngleAxis dataKey="subject" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 600 }} />
-                <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="#475569" tick={false} />
-                <Radar
-                  name="Career Competency"
-                  dataKey="value"
-                  stroke="#a855f7"
-                  fill="#6366f1"
-                  fillOpacity={0.25}
-                />
-              </RadarChart>
-            </ResponsiveContainer>
-          </div>
+          {progressData.length === 0 ? (
+            <EmptyState
+              icon={Activity}
+              title="Your skill balance will appear here"
+              description="CareerOS will visualize your focus areas after you log practice, projects, or study time."
+              theme={theme}
+            />
+          ) : (
+            <div className="h-72 w-full text-xs flex items-center justify-center">
+              <ResponsiveContainer width="100%" height="100%">
+                <RadarChart cx="50%" cy="50%" outerRadius="70%" data={skillRadarData}>
+                  <PolarGrid stroke={theme === 'dark' ? '#334155' : '#cbd5e1'} strokeDasharray="4 4" />
+                  <PolarAngleAxis dataKey="subject" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 600 }} />
+                  <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="#475569" tick={false} />
+                  <Radar
+                    name="Career Competency"
+                    dataKey="value"
+                    stroke="#a855f7"
+                    fill="#6366f1"
+                    fillOpacity={0.25}
+                  />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -925,19 +944,28 @@ export default function ProgressView({
                   <span>7-Day Study Metric Breakdown</span>
                   <span className="text-[10px] text-slate-400 font-normal">Hours / DSA / Projects</span>
                 </div>
-                <div className="h-64 w-full text-xs">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={weeklyChartData} margin={{ top: 10, right: 0, left: -25, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#1e293b' : '#e2e8f0'} opacity={0.4} vertical={false} />
-                      <XAxis dataKey="name" stroke="#64748b" tickLine={false} axisLine={false} tick={{ fontSize: 10 }} />
-                      <YAxis stroke="#64748b" tickLine={false} axisLine={false} tick={{ fontSize: 10 }} />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Bar dataKey="hours" name="Coding Hours" fill="#6366f1" radius={[4, 4, 0, 0]} barSize={10} />
-                      <Bar dataKey="dsa" name="DSA Solved" fill="#a855f7" radius={[4, 4, 0, 0]} barSize={10} />
-                      <Bar dataKey="projects" name="Project Hours" fill="#ec4899" radius={[4, 4, 0, 0]} barSize={10} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+                {progressData.length === 0 ? (
+                  <EmptyState
+                    icon={BarChart3}
+                    title="No progress history yet"
+                    description="Log your first practice session to see your weekly learning activity here."
+                    theme={theme}
+                  />
+                ) : (
+                  <div className="h-64 w-full text-xs">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={weeklyChartData} margin={{ top: 10, right: 0, left: -25, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#1e293b' : '#e2e8f0'} opacity={0.4} vertical={false} />
+                        <XAxis dataKey="name" stroke="#64748b" tickLine={false} axisLine={false} tick={{ fontSize: 10 }} />
+                        <YAxis stroke="#64748b" tickLine={false} axisLine={false} tick={{ fontSize: 10 }} />
+                        <Tooltip content={<CustomTooltip />} />
+                        <Bar dataKey="hours" name="Coding Hours" fill="#6366f1" radius={[4, 4, 0, 0]} barSize={10} />
+                        <Bar dataKey="dsa" name="DSA Solved" fill="#a855f7" radius={[4, 4, 0, 0]} barSize={10} />
+                        <Bar dataKey="projects" name="Project Hours" fill="#ec4899" radius={[4, 4, 0, 0]} barSize={10} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
               </div>
             )}
 
@@ -947,16 +975,25 @@ export default function ProgressView({
                   <span>Career Competency Balance</span>
                   <span className="text-[10px] text-indigo-400 font-normal">Skill Distribution</span>
                 </div>
-                <div className="h-64 w-full text-xs flex items-center justify-center">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RadarChart cx="50%" cy="50%" outerRadius="65%" data={skillRadarData}>
-                      <PolarGrid stroke={theme === 'dark' ? '#334155' : '#cbd5e1'} strokeDasharray="4 4" />
-                      <PolarAngleAxis dataKey="subject" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 9, fontWeight: 600 }} />
-                      <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="#475569" tick={false} />
-                      <Radar name="Career Competency" dataKey="value" stroke="#a855f7" fill="#6366f1" fillOpacity={0.3} />
-                    </RadarChart>
-                  </ResponsiveContainer>
-                </div>
+                {progressData.length === 0 ? (
+                  <EmptyState
+                    icon={Activity}
+                    title="Your skill balance will appear here"
+                    description="CareerOS will visualize your focus areas after you log practice, projects, or study time."
+                    theme={theme}
+                  />
+                ) : (
+                  <div className="h-64 w-full text-xs flex items-center justify-center">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RadarChart cx="50%" cy="50%" outerRadius="65%" data={skillRadarData}>
+                        <PolarGrid stroke={theme === 'dark' ? '#334155' : '#cbd5e1'} strokeDasharray="4 4" />
+                        <PolarAngleAxis dataKey="subject" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 9, fontWeight: 600 }} />
+                        <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="#475569" tick={false} />
+                        <Radar name="Career Competency" dataKey="value" stroke="#a855f7" fill="#6366f1" fillOpacity={0.3} />
+                      </RadarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
               </div>
             )}
 
