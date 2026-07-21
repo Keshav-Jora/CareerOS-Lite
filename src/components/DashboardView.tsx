@@ -86,7 +86,7 @@ export default function DashboardView({
   const snapshotStatistics = careerSnapshot ? new CareerStatisticsService().fromSnapshot(careerSnapshot) : null;
   const { recommendation, featuredOpportunity } = intelligence;
   const isDark = theme === 'dark';
-  const surface = isDark ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-white/90 shadow-sm';
+  const surface = isDark ? 'surface-elevated border-slate-800 bg-slate-900/60' : 'surface-elevated border-slate-200 bg-white/90 shadow-sm';
   const mutedText = isDark ? 'text-slate-400' : 'text-slate-600';
   const headingText = isDark ? 'text-white' : 'text-slate-950';
   const trendLabel = intelligence.weeklyTrend === 0
@@ -94,7 +94,7 @@ export default function DashboardView({
     : `${intelligence.weeklyTrend > 0 ? '↑' : '↓'} ${Math.abs(intelligence.weeklyTrend)}h this week`;
 
   return (
-    <div className="mx-auto max-w-7xl space-y-7 pb-8">
+    <div className="mx-auto max-w-7xl space-y-6 pb-8 sm:space-y-7">
       <header className="flex flex-col gap-4 px-1 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className={`text-sm font-medium ${mutedText}`}>{getGreeting()}, {userName}.</p>
@@ -108,7 +108,7 @@ export default function DashboardView({
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-400" aria-hidden="true" />
             AI analysis refreshed now
           </span>
-          <button type="button" onClick={() => onNavigateToView('nova')} className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 font-semibold transition hover:border-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${isDark ? 'border-slate-700 bg-slate-900 text-slate-300' : 'border-slate-200 bg-white text-slate-700'}`}>
+          <button type="button" onClick={() => onNavigateToView('nova')} className={`interactive-surface inline-flex min-h-10 items-center gap-2 rounded-xl border px-3 py-2 font-semibold transition hover:border-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${isDark ? 'border-slate-700 bg-slate-900 text-slate-300' : 'border-slate-200 bg-white text-slate-700'}`}>
             <Search className="h-3.5 w-3.5" aria-hidden="true" /> Quick search
           </button>
         </div>
@@ -179,19 +179,19 @@ export default function DashboardView({
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(300px,0.75fr)]">
-        <section className={`rounded-3xl border p-6 ${surface}`} aria-labelledby="top-opportunity-title">
+          <section className={`rounded-3xl border p-5 sm:p-6 ${surface}`} aria-labelledby="top-opportunity-title">
           <div className="flex items-center justify-between gap-4"><div className="flex items-center gap-2 text-sm font-semibold text-sky-400"><CalendarDays className="h-4 w-4" aria-hidden="true" /> Top opportunity</div><button type="button" onClick={() => onNavigateToView('opportunities')} className={`inline-flex items-center gap-1 text-xs font-semibold ${isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-950'}`}>View all <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" /></button></div>
           {featuredOpportunity ? <FeaturedOpportunityCard featured={featuredOpportunity} isDark={isDark} onView={() => onNavigateToView('opportunities')} /> : <EmptyOpportunityState isDark={isDark} onAdd={onAddOpportunityTrigger} />}
         </section>
 
-        <section className={`rounded-3xl border p-6 ${surface}`} aria-labelledby="momentum-title">
+          <section className={`rounded-3xl border p-5 sm:p-6 ${surface}`} aria-labelledby="momentum-title">
           <div className="flex items-center gap-2 text-sm font-semibold text-emerald-400"><TrendingUp className="h-4 w-4" aria-hidden="true" /> Learning momentum</div>
           <h2 id="momentum-title" className={`mt-3 font-display text-xl font-bold ${headingText}`}>{intelligence.streak} day learning streak</h2>
           {progress.length > 0 ? <><p className={`mt-2 text-sm ${mutedText}`}>{intelligence.weeklyProgress}% of this week has recorded learning activity.</p><div className={`mt-5 h-3 overflow-hidden rounded-full ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`} aria-label={`${intelligence.weeklyProgress}% weekly learning progress`} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={intelligence.weeklyProgress}><motion.div initial={{ width: 0 }} animate={{ width: `${intelligence.weeklyProgress}%` }} transition={{ duration: 0.7, ease: 'easeOut' }} className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-teal-400" /></div><div className="mt-5 flex items-end gap-1.5" aria-label="Seven-day activity visualization">{Array.from({ length: 7 }, (_, index) => <span key={index} className={`h-10 flex-1 rounded-sm ${isDark ? 'bg-emerald-400/45' : 'bg-emerald-400/60'}`} style={{ transform: `scaleY(${0.35 + ((intelligence.weeklyProgress / 100) * ((index % 3) + 1) / 3)})`, transformOrigin: 'bottom' }} />)}</div></> : <EmptyMomentumState isDark={isDark} onLog={() => onNavigateToView('progress')} />}
         </section>
       </div>
 
-      <section className={`rounded-3xl border p-6 ${surface}`} aria-labelledby="decision-memory-title">
+      <section className={`rounded-3xl border p-5 sm:p-6 ${surface}`} aria-labelledby="decision-memory-title">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center"><div><div className="flex items-center gap-2 text-sm font-semibold text-fuchsia-400"><Sparkles className="h-4 w-4" aria-hidden="true" /> Decision memory</div><h2 id="decision-memory-title" className={`mt-2 font-display text-lg font-bold ${headingText}`}>{recommendation.nextBestAction.title}</h2><p className={`mt-1 text-sm ${mutedText}`}>{intelligence.latestActivity ? `Latest recorded outcome: ${intelligence.latestActivity.action}` : 'Outcome tracking begins when you log progress in your Journey.'}</p></div><button type="button" onClick={() => onNavigateToView('journey')} className={`inline-flex items-center gap-2 text-sm font-semibold ${isDark ? 'text-indigo-300 hover:text-indigo-200' : 'text-indigo-600 hover:text-indigo-700'} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400`}>Open Journey <ArrowRight className="h-4 w-4" aria-hidden="true" /></button></div>
       </section>
 
