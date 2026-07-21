@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, type ReactNode } from 'react';
+import React, { useState, useEffect, useRef, useCallback, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, X, Send, Bot, User, Zap, Database, Cpu, Menu, MessageSquare, MoreHorizontal, Pencil, Pin, Plus, Search, Trash2 } from 'lucide-react';
 import { Opportunity, DailyProgress, TimelineEntry } from '../types';
@@ -261,13 +261,14 @@ export default function AIAssistant({ theme, opportunities, progress, timeline, 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto scroll to bottom
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  const scrollToBottom = useCallback((behavior: ScrollBehavior) => {
+    messagesEndRef.current?.scrollIntoView({ behavior, block: 'end' });
+  }, []);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, assistantState]);
+    // Avoid repeatedly starting a smooth-scroll animation for every streamed token.
+    scrollToBottom(assistantState === 'streaming' ? 'auto' : 'smooth');
+  }, [messages, assistantState, scrollToBottom]);
 
   /* Legacy mock greeting removed in favor of useNovaChat.
     const today = new Date().toISOString().split('T')[0];
@@ -503,11 +504,14 @@ export default function AIAssistant({ theme, opportunities, progress, timeline, 
             </AnimatePresence>
 
             {/* Messages Area */}
-            <div className={`flex-1 overflow-y-auto p-4 space-y-4 ${messages.length === 1 && assistantState === 'idle' ? 'flex flex-col justify-center' : ''}`} role="log" aria-live="polite" aria-relevant="additions text">
+            <div className={`flex-1 overflow-y-auto p-3.5 sm:p-4 space-y-4 ${messages.length === 1 && assistantState === 'idle' ? 'flex flex-col justify-center' : ''}`} role="log" aria-live="polite" aria-relevant="additions text" aria-busy={assistantState !== 'idle'}>
               {messages.map((msg) => (
-                <div
+                <motion.div
                   key={msg.id}
-                  className={`flex gap-2.5 max-w-[88%] ${
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.16, ease: 'easeOut' }}
+                  className={`flex gap-2.5 max-w-[93%] sm:max-w-[88%] ${
                     msg.role === 'user' ? 'ml-auto flex-row-reverse' : ''
                   }`}
                 >
@@ -533,6 +537,12 @@ export default function AIAssistant({ theme, opportunities, progress, timeline, 
                           : 'bg-slate-50 text-slate-800 border border-slate-200/80 rounded-tl-none shadow-sm'
                       }`}
                     >
+                      {msg.role === 'model' && msg.provider && msg.model && (
+                        <div className="mb-2 flex flex-wrap items-center gap-1.5 border-b border-slate-700/40 pb-2 text-[9px] font-medium text-slate-400">
+                          <span className="rounded-full border border-indigo-400/20 bg-indigo-500/10 px-2 py-0.5 text-indigo-300">Provider · {msg.provider}</span>
+                          <span className="max-w-full truncate rounded-full border border-slate-700 bg-slate-950/45 px-2 py-0.5 font-mono text-slate-400" title={msg.model}>Model · {msg.model}</span>
+                        </div>
+                      )}
                       {/* Markdown Formatted Text */}
                       <MarkdownText content={msg.text} isStreaming={msg.isStreaming} />
                     </div>
@@ -540,7 +550,7 @@ export default function AIAssistant({ theme, opportunities, progress, timeline, 
                       {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
-                </div>
+                </motion.div>
               ))}
 
               {/* Thinking Indicator Animation */}
