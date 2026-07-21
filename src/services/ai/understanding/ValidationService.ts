@@ -20,7 +20,8 @@ export class ValidationService {
       const result: ActionValidation = { valid: false, normalized: false, issues: [{ code: 'unsupported', message: `I couldn't determine which item you want to ${action}. Please specify its title.` }] };
       return result;
     }
-    if (['create', 'update'].includes(intent) && ['opportunity', 'project', 'goal', 'skill'].includes(entity) && !this.text(payload.title ?? payload.name)) issues.push({ field: 'title', code: 'required', message: 'A title is required.' });
+    const requiresTitle = intent === 'create' || (intent === 'update' && entity !== 'opportunity');
+    if (requiresTitle && ['opportunity', 'project', 'goal', 'skill'].includes(entity) && !this.text(payload.title ?? payload.name)) issues.push({ field: 'title', code: 'required', message: 'A title is required.' });
     this.date(payload, 'deadline', issues); this.date(payload, 'applicationDate', issues); this.date(payload, 'targetDate', issues);
     this.enum(payload, 'priority', priorities, issues); this.enum(payload, 'status', statuses, issues); this.category(payload, issues);
     this.url(payload, 'officialLink', issues); this.url(payload, 'repository', issues); this.url(payload, 'demo', issues);

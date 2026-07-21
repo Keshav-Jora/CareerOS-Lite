@@ -169,6 +169,40 @@ export class ExtractionService {
   }
   private status(message: string): string | undefined { return this.value(message, /\b(saved|planned|applied|under review|shortlisted|interview|selected|rejected|completed)\b/i); }
   private dateAfter(message: string, marker: RegExp): string | undefined { const match = message.match(marker); if (!match) return undefined; const value = message.slice(match.index! + match[0].length).match(/^(today|tomorrow|next monday|\d{4}-\d{2}-\d{2}|\d{1,2}\s+[A-Za-z]+(?:\s*,?\s*\d{4})?|[A-Za-z]+\s+\d{1,2}(?:,?\s*\d{4})?)/i)?.[1]; return value ? this.normalizeDate(value) : undefined; }
-  private normalizeDate(value: string): string | undefined { const today = new Date(); if (/^today$/i.test(value)) return this.isoDate(today); if (/^tomorrow$/i.test(value)) { today.setDate(today.getDate() + 1); return this.isoDate(today); } if (/^next monday$/i.test(value)) { today.setDate(today.getDate() + ((8 - today.getDay()) % 7 || 7)); return this.isoDate(today); } const parsed = new Date(value); return Number.isNaN(parsed.getTime()) ? undefined : this.isoDate(parsed); }
+  private normalizeDate(value: string): string | undefined {
+    const today = new Date();
+    if (/^today$/i.test(value)) return this.isoDate(today);
+    if (/^tomorrow$/i.test(value)) { today.setDate(today.getDate() + 1); return this.isoDate(today); }
+    if (/^next monday$/i.test(value)) { today.setDate(today.getDate() + ((8 - today.getDay()) % 7 || 7)); return this.isoDate(today); }
+
+    const input = value.trim();
+    const iso = input.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (iso) return this.validIsoDate(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
+
+    const named = input.match(/^(?:(\d{1,2})\s+([A-Za-z]+)|([A-Za-z]+)\s+(\d{1,2}))(?:,?\s+(\d{4}))?$/);
+    if (!named) return undefined;
+
+    const day = Number(named[1] ?? named[4]);
+    const monthName = (named[2] ?? named[3]).toLowerCase();
+    const month = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'].findIndex((name) => name.startsWith(monthName));
+    if (month < 0) return undefined;
+
+    const explicitYear = named[5] ? Number(named[5]) : undefined;
+    let year = explicitYear ?? today.getFullYear();
+    let normalized = this.validIsoDate(year, month, day);
+    if (!normalized) return undefined;
+
+    // A yearless deadline belongs to the current application cycle. If that date
+    // has passed, it refers to the next cycle—not JavaScript's arbitrary 2001 default.
+    if (!explicitYear && normalized < this.isoDate(today)) {
+      year += 1;
+      normalized = this.validIsoDate(year, month, day);
+    }
+    return normalized;
+  }
+  private validIsoDate(year: number, month: number, day: number): string | undefined {
+    const candidate = new Date(year, month, day);
+    return candidate.getFullYear() === year && candidate.getMonth() === month && candidate.getDate() === day ? this.isoDate(candidate) : undefined;
+  }
   private isoDate(value: Date): string { return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`; }
 }

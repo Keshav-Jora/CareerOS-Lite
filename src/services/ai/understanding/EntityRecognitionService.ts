@@ -41,6 +41,10 @@ export class EntityRecognitionService {
       const result: EntityDetection = { entity: 'opportunity', confidence: 'high' };
       return result;
     }
+    if (intent === 'update' && /\bdeadline\s+(?:changed|change|moved|move|updated|update)\b/i.test(message)) {
+      const result: EntityDetection = { entity: 'opportunity', confidence: 'high' };
+      return result;
+    }
     if (intent === 'create' && /\b(completed|finished|built|solved)\b/i.test(message)) {
       const result: EntityDetection = { entity: 'journey', confidence: 'high' };
       return result;

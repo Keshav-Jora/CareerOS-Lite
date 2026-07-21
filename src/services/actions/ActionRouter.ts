@@ -144,8 +144,11 @@ export class ActionRouter {
   private targetId(plan: ActionPlan, entity: CanonicalEntity): string | undefined {
     if (typeof plan.payload.id === 'string') return plan.payload.id;
     const title = typeof plan.payload.title === 'string' ? plan.payload.title.trim().toLowerCase() : '';
-    if (!title) return undefined;
-    const matches = dataService.repository.getAll<Record<string, unknown> & { id: string }>(entity).filter((item) => {
+    const records = dataService.repository.getAll<Record<string, unknown> & { id: string }>(entity);
+    // A deadline-only update is unambiguous when there is one opportunity. Keep
+    // ambiguous commands safe by requiring a title whenever more than one exists.
+    if (!title) return entity === 'opportunity' && records.length === 1 ? records[0].id : undefined;
+    const matches = records.filter((item) => {
       const candidate = typeof item.title === 'string' ? item.title : typeof item.name === 'string' ? item.name : '';
       const normalized = candidate.trim().toLowerCase();
       return normalized === title || normalized.includes(title) || title.includes(normalized);
@@ -170,7 +173,7 @@ export class ActionRouter {
     });
     if (sourceOrganizationMatches.length === 1) return sourceOrganizationMatches[0].id;
     const queryTokens = this.referenceTokens(`${title} ${plan.sourceMessage}`);
-    const ranked = dataService.repository.getAll<Record<string, unknown> & { id: string }>(entity)
+    const ranked = records
       .map((item) => ({ item, score: this.referenceScore(queryTokens, item) }))
       .filter((candidate) => candidate.score > 0)
       .sort((left, right) => right.score - left.score);
