@@ -14,6 +14,7 @@ export class CanonicalCareerRepository {
   create<T extends CanonicalRecord>(entity: CanonicalEntity, payload: Omit<T, 'id'> & Partial<Pick<T, 'id'>>): T {
     const value = { ...payload, id: payload.id ?? `${entity}-${Date.now()}` } as T;
     this.persist(entity, [...this.getAll<T>(entity), value]);
+    if (entity === 'opportunity') logOpportunityDebug('CanonicalCareerRepository', 'src/services/data/CanonicalCareerRepository.ts', 'create', { entity, payload }, value);
     return value;
   }
   update<T extends CanonicalRecord>(entity: CanonicalEntity, id: string, payload: Partial<T>): T | null {

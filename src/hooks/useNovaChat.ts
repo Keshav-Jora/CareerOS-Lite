@@ -115,7 +115,7 @@ export function useNovaChat(context: NovaChatContext, onActionExecuted?: () => v
 
 function confirmationResponse(message: string): 'confirmed' | 'cancelled' | null {
   const value = message.trim().toLowerCase();
-  if (/^(yes|confirm|yes delete it|delete it|go ahead)$/i.test(value)) return 'confirmed';
-  if (/^(cancel|no)$/i.test(value)) return 'cancelled';
+  if (/^(yes|yeah|y|confirm|yes delete it|delete it|do it|go ahead|continue)$/i.test(value)) return 'confirmed';
+  if (/^(cancel|no|stop|never mind)$/i.test(value)) return 'cancelled';
   return null;
 }

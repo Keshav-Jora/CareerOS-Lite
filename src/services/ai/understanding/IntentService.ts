@@ -1,3 +1,4 @@
+
 export type ActionIntent = 'create' | 'update' | 'delete' | 'archive' | 'restore' | 'complete' | 'search' | 'show' | 'summarize' | 'recommend' | 'explain' | 'prioritize';
 export type IntentConfidence = 'high' | 'medium' | 'low';
 
@@ -26,27 +27,49 @@ export class IntentService {
 
   detect(message: string): IntentDetection {
     const value = message.trim();
-    if (!value) return { intent: null, confidence: 'low' };
+    if (!value) {
+      const result = { intent: null, confidence: 'low' } as const;
+      return result;
+    }
     if (/^\s*today'?s mission\b/im.test(value)) {
-      return { intent: 'create', confidence: 'high' };
+      const result: IntentDetection = { intent: 'create', confidence: 'high' };
+      return result;
     }
-    if (/\b(completed|finished|built)\b/i.test(value)) {
-      return { intent: 'create', confidence: 'high' };
+    if (/\b(?:i need to do .*today|today'?s tasks? are|help me plan today)\b/i.test(value)) {
+      const result: IntentDetection = { intent: 'create', confidence: 'high' };
+      return result;
     }
-    if (/\b(completed|finished|built)\b/i.test(value)) {
-      return { intent: 'create', confidence: 'high' };
+    if (/\b(?:my goal is|i want (?:a|an|to become|to work at)|help me track .*goal|track my .*goal)\b/i.test(value)) {
+      const result: IntentDetection = { intent: 'create', confidence: 'high' };
+      return result;
     }
-    if (/^\s*(update|change|edit|set)\b/i.test(value)) {
-      return { intent: 'update', confidence: 'high' };
+    if (/\b(?:i found|remember|store|save|track this|want to apply)\b.*\b(?:opportunity|intern(?:ship)?|job|fellowship|scholarship|application)\b/i.test(value)) {
+      const result: IntentDetection = { intent: 'create', confidence: 'high' };
+      return result;
+    }
+    if (/\b(?:don't want to track|do not want to track|stop tracking|forget this)\b/i.test(value)) {
+      const result: IntentDetection = { intent: 'delete', confidence: 'high' };
+      return result;
+    }
+    if (/\b(completed|finished|built|solved)\b/i.test(value)) {
+      const result: IntentDetection = { intent: 'create', confidence: 'high' };
+      return result;
+    }
+    if (/^\s*(update|change|changed|edit|set|modify|move)\b/i.test(value)) {
+      const result: IntentDetection = { intent: 'update', confidence: 'high' };
+      return result;
     }
     const scores = patterns.reduce<Map<ActionIntent, number>>((result, pattern) => {
       if (pattern.expression.test(value)) result.set(pattern.intent, (result.get(pattern.intent) ?? 0) + pattern.weight);
       return result;
     }, new Map());
     const ranked = [...scores.entries()].sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]));
-    if (!ranked.length) return { intent: null, confidence: 'low' };
+    if (!ranked.length) {
+      const result = { intent: null, confidence: 'low' } as const;
+      return result;
+    }
     const [intent, score] = ranked[0];
-    return { intent, confidence: score >= 3 ? 'high' : score === 2 ? 'medium' : 'low' };
+    const result: IntentDetection = { intent, confidence: score >= 3 ? 'high' : score === 2 ? 'medium' : 'low' };
+    return result;
   }
 }
-

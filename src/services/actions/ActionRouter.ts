@@ -21,6 +21,7 @@ export interface ActionPlanExecutionResult {
 export class ActionRouter {
   private readonly payloadAdapter = new EntityPayloadAdapter();
   routePlan(plan: ActionPlan): ActionPlanExecutionResult {
+    if (plan.entity === 'opportunity') logOpportunityDebug('ActionRouter', 'src/services/actions/ActionRouter.ts', 'routePlan', plan, undefined);
     if (!plan.validation.valid) return { success: false, entity: plan.entity, operation: plan.operation, message: 'Action plan validation failed.', reason: 'validation-failed', issues: plan.validation.issues };
     if (plan.requiresConfirmation) return { success: false, entity: plan.entity, operation: plan.operation, message: 'Confirmation is required before this action can run.', reason: 'confirmation-required' };
     if (!plan.entity) return { success: false, entity: null, operation: plan.operation, message: 'No supported entity was detected.', reason: 'unsupported-operation' };
@@ -43,7 +44,9 @@ export class ActionRouter {
         };
       }
       const data = repository.create(entity, payload as never);
-      return repository.get(entity, data.id) ? this.planSuccess(entity, plan.operation, this.createdMessage(entity, data), data) : { success: false, entity, operation: plan.operation, message: 'CareerOS could not verify that item was saved.' };
+      const result = repository.get(entity, data.id) ? this.planSuccess(entity, plan.operation, this.createdMessage(entity, data), data) : { success: false, entity, operation: plan.operation, message: 'CareerOS could not verify that item was saved.' };
+      if (entity === 'opportunity') logOpportunityDebug('ActionRouter', 'src/services/actions/ActionRouter.ts', 'routePlan', plan, result);
+      return result;
     }
     if (plan.operation === 'update') { const id = this.targetId(plan, entity); if (!id) return this.targetMissing(entity, plan.operation); const current = repository.get<Record<string, unknown> & { id: string }>(entity, id); const data = repository.update(entity, id, payload as never); return data && repository.get(entity, id) ? this.planSuccess(entity, plan.operation, this.updatedMessage(entity, current ?? {}, data), data) : this.targetMissing(entity, plan.operation); }
     if (plan.operation === 'delete') { const id = this.targetId(plan, entity); if (!id) return this.targetMissing(entity, plan.operation); const current = repository.get<Record<string, unknown> & { id: string }>(entity, id); return repository.delete(entity, id) ? this.planSuccess(entity, plan.operation, this.deletedMessage(entity, current ?? {}, repository.getAll(entity).length)) : this.targetMissing(entity, plan.operation); }
@@ -200,7 +203,7 @@ export class ActionRouter {
   private updatedMessage(entity: CanonicalEntity, before: Record<string, unknown>, after: Record<string, unknown>): string {
     const changes = Object.keys(after).filter((key) => key !== 'id' && key !== 'updatedAt' && JSON.stringify(before[key]) !== JSON.stringify(after[key]));
     const details = changes.map((key) => `${key}: ${String(after[key])}`).join(', ');
-    return `Updated **${this.recordTitle(after, entity)}**${details ? ` ? ${details}.` : '.'}`;
+    return `Updated **${this.recordTitle(after, entity)}**${details ? ` — ${details}.` : '.'}`;
   }
   private deletedMessage(entity: CanonicalEntity, data: Record<string, unknown>, remaining: number): string {
     const title = this.recordTitle(data, entity);

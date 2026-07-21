@@ -21,16 +21,37 @@ const rules: EntityRule[] = [
 /** Identifies one canonical entity; structured field extraction is a later stage. */
 export class EntityRecognitionService {
   detectEntity(message: string, intent?: ActionIntent | null): EntityDetection {
-    if (!message.trim()) return { entity: null, confidence: 'low' };
-    if (intent === 'create' && /\b(completed|finished|built)\b/i.test(message)) return { entity: 'journey', confidence: 'high' };
-    if (intent === 'create' && /\b(completed|finished|built)\b/i.test(message)) return { entity: 'journey', confidence: 'high' };
+    if (!message.trim()) {
+      const result = { entity: null, confidence: 'low' } as const;
+      return result;
+    }
+    if (/\b(?:my goal is|i want (?:a|an|to become|to work at)|help me track .*goal|track my .*goal)\b/i.test(message)) {
+      const result: EntityDetection = { entity: 'goal', confidence: 'high' };
+      return result;
+    }
+    if (/\b(?:i need to do .*today|today'?s tasks? are|help me plan today)\b/i.test(message)) {
+      const result: EntityDetection = { entity: 'mission', confidence: 'high' };
+      return result;
+    }
+    if (/\b(?:i found|remember|store|save|track this|want to apply|don't want to track|do not want to track|stop tracking|forget this)\b.*\b(?:opportunity|intern(?:ship)?|job|fellowship|scholarship|application)\b/i.test(message)) {
+      const result: EntityDetection = { entity: 'opportunity', confidence: 'high' };
+      return result;
+    }
+    if (intent === 'create' && /\b(completed|finished|built|solved)\b/i.test(message)) {
+      const result: EntityDetection = { entity: 'journey', confidence: 'high' };
+      return result;
+    }
     const scores = rules.reduce<Map<ActionEntity, number>>((result, rule) => {
       if (rule.expression.test(message) && (!rule.intents || (intent ? rule.intents.includes(intent) : true))) result.set(rule.entity, (result.get(rule.entity) ?? 0) + rule.weight);
       return result;
     }, new Map());
     const ranked = [...scores.entries()].sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]));
-    if (!ranked.length) return { entity: null, confidence: 'low' };
+    if (!ranked.length) {
+      const result = { entity: null, confidence: 'low' } as const;
+      return result;
+    }
     const [entity, score] = ranked[0];
-    return { entity, confidence: score >= 3 ? 'high' : score === 2 ? 'medium' : 'low' };
+    const result: EntityDetection = { entity, confidence: score >= 3 ? 'high' : score === 2 ? 'medium' : 'low' };
+    return result;
   }
 }

@@ -17,14 +17,16 @@ export class ValidationService {
     const issues: ActionValidationIssue[] = [];
     if (!entity || !intent) {
       const action = intent === 'delete' ? 'delete' : intent === 'update' ? 'update' : 'complete';
-      return { valid: false, normalized: false, issues: [{ code: 'unsupported', message: `I couldn't determine which item you want to ${action}. Please specify its title.` }] };
+      const result: ActionValidation = { valid: false, normalized: false, issues: [{ code: 'unsupported', message: `I couldn't determine which item you want to ${action}. Please specify its title.` }] };
+      return result;
     }
     if (['create', 'update'].includes(intent) && ['opportunity', 'project', 'goal', 'skill'].includes(entity) && !this.text(payload.title ?? payload.name)) issues.push({ field: 'title', code: 'required', message: 'A title is required.' });
     this.date(payload, 'deadline', issues); this.date(payload, 'applicationDate', issues); this.date(payload, 'targetDate', issues);
     this.enum(payload, 'priority', priorities, issues); this.enum(payload, 'status', statuses, issues); this.category(payload, issues);
     this.url(payload, 'officialLink', issues); this.url(payload, 'repository', issues); this.url(payload, 'demo', issues);
     this.array(payload, 'checklist', issues); this.array(payload, 'skills', issues); this.array(payload, 'tags', issues);
-    return { valid: issues.length === 0, normalized: issues.length === 0, issues };
+    const result: ActionValidation = { valid: issues.length === 0, normalized: issues.length === 0, issues };
+    return result;
   }
   private text(value: unknown): boolean { return typeof value === 'string' && value.trim().length > 0; }
   private date(payload: ExtractedPayload, field: string, issues: ActionValidationIssue[]): void { const value = payload[field]; if (value !== undefined && (!this.text(value) || Number.isNaN(new Date(value as string).getTime()))) issues.push({ field, code: 'invalid-value', message: `${field} could not be parsed.` }); }

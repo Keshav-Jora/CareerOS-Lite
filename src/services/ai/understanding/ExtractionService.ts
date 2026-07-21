@@ -7,20 +7,25 @@ const knownSkills = ['DSA', 'SQL', 'React', 'Docker', 'AWS', 'TypeScript', 'Java
 /** Pure, entity-scoped natural-language extraction. Validation and persistence are separate stages. */
 export class ExtractionService {
   extract(message: string, _intent: ActionIntent | null, entity: ActionEntity | null): ExtractedPayload {
-    if (!entity) return {};
+    if (!entity) {
+      const result = {};
+      return result;
+    }
     const base = { skills: this.skills(message), links: this.links(message), tags: this.tags(message), checklist: this.checklist(message) };
-    if (entity === 'opportunity') return this.opportunity(message, base);
-    if (entity === 'project') return { ...base, title: this.title(message), description: this.value(message, /\bdescription\s*[:\-]?\s*([^\n]+)/i), technologies: this.skills(message), status: this.status(message), repository: this.links(message).find((link) => /github\.com/i.test(link)), demo: this.links(message).find((link) => !/github\.com/i.test(link)) };
-    if (entity === 'goal') return { title: this.goalTitle(message), targetDate: this.dateAfter(message, /\b(?:by|target date|deadline)\s*(?:is|on|:)?\s*/i), priority: this.value(message, /\bpriority\s*[:\-]?\s*(high|medium|low)/i), notes: this.value(message, /\bnotes?\s*[:\-]?\s*([^\n]+)/i) };
-    if (entity === 'skill') return { name: this.value(message, /\b(?:add|learn|skill)\s+([A-Za-z0-9.+#-]+)/i) ?? this.skills(message)[0], level: this.value(message, /\b(beginner|intermediate|advanced)\b/i) };
-    if (entity === 'mission') return this.parsedMission(message, base);
-    if (entity === 'journey') return this.journey(message);
-    return { ...base, title: this.title(message) };
+    let result: ExtractedPayload;
+    if (entity === 'opportunity') result = this.opportunity(message, base);
+    else if (entity === 'project') result = { ...base, title: this.title(message), description: this.value(message, /\bdescription\s*[:\-]?\s*([^\n]+)/i), technologies: this.skills(message), status: this.status(message), repository: this.links(message).find((link) => /github\.com/i.test(link)), demo: this.links(message).find((link) => !/github\.com/i.test(link)) };
+    else if (entity === 'goal') result = { title: this.goalTitle(message), targetDate: this.dateAfter(message, /\b(?:by|target date|deadline)\s*(?:is|on|:)?\s*/i), priority: this.value(message, /\bpriority\s*[:\-]?\s*(high|medium|low)/i), notes: this.value(message, /\bnotes?\s*[:\-]?\s*([^\n]+)/i) };
+    else if (entity === 'skill') result = { name: this.value(message, /\b(?:add|learn|skill)\s+([A-Za-z0-9.+#-]+)/i) ?? this.skills(message)[0], level: this.value(message, /\b(beginner|intermediate|advanced)\b/i) };
+    else if (entity === 'mission') result = this.parsedMission(message, base);
+    else if (entity === 'journey') result = this.journey(message);
+    else result = { ...base, title: this.title(message) };
+    return result;
   }
 
   private title(message: string): string | undefined { return this.label(message, ['title']) ?? this.value(message, /\b(?:add|create|update|delete|remove|archive|registered for|track)\s+(?!a new opportunity\b|new opportunity\b|opportunity\b|project\b)([^\n.]+)/i); }
   private mission(message: string, base: ExtractedPayload): ExtractedPayload {
-    return { ...base, title: "Today's Mission", tasks: this.bullets(this.section(message, 'tasks') ?? message), duration: this.value(message, /\b(?:duration|estimated time)\s*:\s*([^\n]+)/i), priority: this.value(message, /\bpriority\s*:\s*(high|medium|low)/i) };
+    return { ...base, title: 'Today’s Mission', tasks: this.bullets(this.section(message, 'tasks') ?? message), duration: this.value(message, /\b(?:duration|estimated time)\s*:\s*([^\n]+)/i), priority: this.value(message, /\bpriority\s*:\s*(high|medium|low)/i) };
   }
   private missionTasks(message: string): string[] {
     const bullets = this.bullets(this.section(message, 'tasks') ?? message);
@@ -46,45 +51,7 @@ export class ExtractionService {
       if (!metadataStarted) tasks.push(line.replace(/^[-*]\s*/, ''));
     }
     const field = (labels: string[]) => {
-      const expression = new RegExp(`^\\s*(?:${labels.join('|')})\\s*:\\s*(.*)import type { ActionIntent } from './IntentService';
-import type { ActionEntity } from './EntityRecognitionService';
-
-export type ExtractedPayload = Record<string, unknown>;
-const knownSkills = ['DSA', 'SQL', 'React', 'Docker', 'AWS', 'TypeScript', 'JavaScript', 'Python', 'Java', 'Node.js', 'Git', 'Cloud'];
-
-/** Pure, entity-scoped natural-language extraction. Validation and persistence are separate stages. */
-export class ExtractionService {
-  extract(message: string, _intent: ActionIntent | null, entity: ActionEntity | null): ExtractedPayload {
-    if (!entity) return {};
-    const base = { skills: this.skills(message), links: this.links(message), tags: this.tags(message), checklist: this.checklist(message) };
-    if (entity === 'opportunity') return this.opportunity(message, base);
-    if (entity === 'project') return { ...base, title: this.title(message), description: this.value(message, /\bdescription\s*[:\-]?\s*([^\n]+)/i), technologies: this.skills(message), status: this.status(message), repository: this.links(message).find((link) => /github\.com/i.test(link)), demo: this.links(message).find((link) => !/github\.com/i.test(link)) };
-    if (entity === 'goal') return { title: this.goalTitle(message), targetDate: this.dateAfter(message, /\b(?:by|target date|deadline)\s*(?:is|on|:)?\s*/i), priority: this.value(message, /\bpriority\s*[:\-]?\s*(high|medium|low)/i), notes: this.value(message, /\bnotes?\s*[:\-]?\s*([^\n]+)/i) };
-    if (entity === 'skill') return { name: this.value(message, /\b(?:add|learn|skill)\s+([A-Za-z0-9.+#-]+)/i) ?? this.skills(message)[0], level: this.value(message, /\b(beginner|intermediate|advanced)\b/i) };
-    if (entity === 'mission') return this.parsedMission(message, base);
-    if (entity === 'journey') return this.journey(message);
-    return { ...base, title: this.title(message) };
-  }
-
-  private title(message: string): string | undefined { return this.label(message, ['title']) ?? this.value(message, /\b(?:add|create|update|delete|remove|archive|registered for|track)\s+(?!a new opportunity\b|new opportunity\b|opportunity\b|project\b)([^\n.]+)/i); }
-  private mission(message: string, base: ExtractedPayload): ExtractedPayload {
-    return { ...base, title: "Today's Mission", tasks: this.bullets(this.section(message, 'tasks') ?? message), duration: this.value(message, /\b(?:duration|estimated time)\s*:\s*([^\n]+)/i), priority: this.value(message, /\bpriority\s*:\s*(high|medium|low)/i) };
-  }
-  private missionTasks(message: string): string[] {
-    const bullets = this.bullets(this.section(message, 'tasks') ?? message);
-    if (bullets.length) return bullets;
-    return message.split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter((line) => line && !/^today'?s mission\b|^tasks\b|^(?:duration|estimated time|priority)\s*:/i.test(line));
-  }
-  private goalTitle(message: string): string | undefined {
-    const labelled = this.label(message, ['title']);
-    if (labelled) return labelled;
-    const inline = this.value(message, /\b(?:create|add|update|modify|change|delete|remove|cancel)\s+(?:a\s+)?goal\s*[:\-]?\s*([^\n]+)/i);
-    if (inline && !/^goal$/i.test(inline)) return inline;
-    return message.split(/\r?\n/).map((line) => line.trim()).find((line) => line && !/^create\s+(?:a\s+)?goal\b/i.test(line));
-  }
-, 'i');
+      const expression = new RegExp(`^\\s*(?:${labels.join('|')})\\s*:\\s*(.*)$`, 'i');
       for (let index = 0; index < lines.length; index += 1) {
         const match = lines[index].match(expression);
         if (!match) continue;
@@ -92,7 +59,7 @@ export class ExtractionService {
       }
       return undefined;
     };
-    return { ...base, title: "Today's Mission", tasks, duration: field(['duration', 'estimated time']), priority: field(['priority']), notes: field(['notes']) };
+    return { ...base, title: 'Today’s Mission', tasks, duration: field(['duration', 'estimated time']), priority: field(['priority']), notes: field(['notes']) };
   }
   private journey(message: string): ExtractedPayload {
     const title = message
@@ -131,7 +98,20 @@ export class ExtractionService {
     const checklist = this.sectionArray(fields.checklist) ?? base.checklist;
     const tags = this.sectionArray(fields.tags, true) ?? base.tags;
     const portal = fields.portal ?? fields['application url'] ?? this.links(message)[0];
-    return { ...base, title: fields.title ?? fields.role ?? this.title(message), organization: fields.company ?? fields.organization ?? fields.employer, category: this.normalizeCategory(fields.category) ?? this.category(message), source: fields.platform, priority: fields.priority ?? this.value(message, /\bpriority\s+(high|medium|low)/i), status: fields.status, deadline: fields.deadline ? this.normalizeDate(fields.deadline) : this.dateAfter(message, /\bdeadline\s*(?:is|on|:)?\s*/i), skills, checklist, tags, eligibility: fields.eligibility, resumeVersion: fields.resume, applicationLink: portal, officialLink: portal, notes: fields['preparation notes'] ?? fields.notes };
+    return { ...base, title: fields.title ?? fields.role ?? this.naturalOpportunityTitle(message) ?? this.title(message), organization: fields.company ?? fields.organization ?? fields.employer ?? this.naturalOrganization(message), category: this.normalizeCategory(fields.category) ?? this.category(message), source: fields.platform, priority: fields.priority ?? this.value(message, /\bpriority\s*(?:is\s*)?(high|medium|low)/i), status: fields.status, deadline: fields.deadline ? this.normalizeDate(fields.deadline) : this.dateAfter(message, /\bdeadline\s*(?:is|on|:)?\s*/i), skills, checklist, tags, eligibility: fields.eligibility, resumeVersion: fields.resume, applicationLink: portal, officialLink: portal, notes: fields['preparation notes'] ?? fields.notes };
+  }
+  private naturalOpportunityTitle(message: string): string | undefined {
+    const sentences = message.split(/\r?\n|(?<=[.!])\s+/).map((line) => line.trim()).filter(Boolean);
+    const explicit = sentences.find((line) => /\b(?:intern(?:ship)?|engineer|developer|fellowship|scholarship|job|role|opportunity)\b/i.test(line) && !/^(?:save|track|remember|store|add|i found|i want to apply)/i.test(line));
+    if (explicit) return explicit.replace(/^(?:title|role)\s+is\s+/i, '').replace(/\s+at\s+[^.]+$/i, '').replace(/[.!]+$/, '').trim();
+    const found = message.match(/\b(?:found|save|track|remember|store)\s+(?:a|this|an)?\s*([A-Z][A-Za-z0-9& .-]*(?:internship|intern|job|fellowship|scholarship))/i)?.[1];
+    return found?.replace(/[.!]+$/, '').trim();
+  }
+  private naturalOrganization(message: string): string | undefined {
+    const atCompany = message.match(/\bat\s+([A-Z][A-Za-z0-9& .-]+?)(?:[.!\n]|$)/)?.[1]?.trim();
+    if (atCompany) return atCompany;
+    const namedCompany = message.match(/\b(Google|Microsoft|Amazon|Meta|Apple|Netflix|Flipkart|Deloitte|Oracle|IBM)\b/i)?.[1];
+    return namedCompany;
   }
   private sections(message: string): Record<string, string> {
     const labels = ['title', 'role', 'company', 'organization', 'category', 'platform', 'priority', 'status', 'deadline', 'skills', 'eligibility', 'checklist', 'resume', 'tags', 'portal', 'application url', 'preparation notes', 'notes'];
@@ -144,8 +124,18 @@ export class ExtractionService {
     if (!value) return undefined;
     const normalized = value.trim().toLowerCase().replace(/\s+/g, ' ');
     const aliases: Record<string, string> = {
-      intern: 'Internship', internship: 'Internship', job: 'Job', scholarship: 'Scholarship', fellowship: 'Fellowship', competition: 'Competition', volunteer: 'Volunteer',
-      'open source': 'Open Source Program', 'open source program': 'Open Source Program', oss: 'Open Source Program', training: 'Training', bootcamp: 'Bootcamp',
+      intern: 'Internship',
+      internship: 'Internship',
+      job: 'Job',
+      scholarship: 'Scholarship',
+      fellowship: 'Fellowship',
+      competition: 'Competition',
+      volunteer: 'Volunteer',
+      'open source': 'Open Source Program',
+      'open source program': 'Open Source Program',
+      oss: 'Open Source Program',
+      training: 'Training',
+      bootcamp: 'Bootcamp',
     };
     return aliases[normalized] ?? normalized.replace(/\b\w/g, (letter) => letter.toUpperCase());
   }
@@ -161,7 +151,7 @@ export class ExtractionService {
     const labelled = this.label(message, ['category']);
     if (labelled) return this.normalizeCategory(labelled);
     const detected = ['open source program', 'open source', 'oss', 'internship', 'intern', 'hackathon', 'job', 'scholarship', 'fellowship', 'competition', 'volunteer', 'training', 'bootcamp', 'course', 'research', 'startup']
-      .find((category) => new RegExp('\\b' + category.replaceAll(' ', '\\s+') + '\\b', 'i').test(message));
+      .find((category) => new RegExp(`\\b${category.replaceAll(' ', '\\s+')}\\b`, 'i').test(message));
     return this.normalizeCategory(detected);
   }
   private status(message: string): string | undefined { return this.value(message, /\b(saved|planned|applied|under review|shortlisted|interview|selected|rejected|completed)\b/i); }
@@ -169,4 +159,3 @@ export class ExtractionService {
   private normalizeDate(value: string): string | undefined { const today = new Date(); if (/^today$/i.test(value)) return this.isoDate(today); if (/^tomorrow$/i.test(value)) { today.setDate(today.getDate() + 1); return this.isoDate(today); } if (/^next monday$/i.test(value)) { today.setDate(today.getDate() + ((8 - today.getDay()) % 7 || 7)); return this.isoDate(today); } const parsed = new Date(value); return Number.isNaN(parsed.getTime()) ? undefined : this.isoDate(parsed); }
   private isoDate(value: Date): string { return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`; }
 }
-
