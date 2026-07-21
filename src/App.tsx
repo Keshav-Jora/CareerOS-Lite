@@ -10,6 +10,7 @@ import { SessionManager } from './services/auth/SessionManager';
 import { AuthService } from './services/auth/AuthService';
 import { dataService } from './services/dataService';
 import { setCareerDataUpdatedAt } from './utils/storage';
+import { AnalyticsService } from './analytics/AnalyticsService';
 
 // Component Imports
 import Sidebar from './components/Sidebar';
@@ -70,7 +71,24 @@ export default function App() {
 
   const { totalXP, level, xpForCurrentLevel, xpProgress, streak } = gamification;
 
-  const syncAccount = useCallback(async (user: User) => { setSyncStatus(navigator.onLine ? 'syncing' : 'offline'); try { await cloudSync.sync(user.uid); setSyncStatus(navigator.onLine ? 'synced' : 'offline'); } catch (error) { console.error('CareerOS cloud sync failed.', error); setSyncStatus('offline'); } }, [cloudSync]);
+  useEffect(() => {
+    AnalyticsService.track({ event: 'app_open', feature: 'application' });
+    const trackAppError = () => AnalyticsService.track({ event: 'app_error', feature: 'application', metadata: { source: 'window' } });
+    window.addEventListener('error', trackAppError);
+    window.addEventListener('unhandledrejection', trackAppError);
+    return () => {
+      window.removeEventListener('error', trackAppError);
+      window.removeEventListener('unhandledrejection', trackAppError);
+    };
+  }, []);
+
+  useEffect(() => {
+    const eventByView: Record<string, 'dashboard_opened' | 'settings_opened'> = { dashboard: 'dashboard_opened', settings: 'settings_opened' };
+    const event = eventByView[currentView];
+    if (event) AnalyticsService.track({ event, feature: currentView });
+  }, [currentView]);
+
+  const syncAccount = useCallback(async (user: User) => { setSyncStatus(navigator.onLine ? 'syncing' : 'offline'); try { await cloudSync.sync(user.uid); setSyncStatus(navigator.onLine ? 'synced' : 'offline'); } catch (error) { console.error('CareerOS cloud sync failed.', error); AnalyticsService.track({ event: 'firebase_error', feature: 'cloud_sync' }); setSyncStatus('offline'); } }, [cloudSync]);
   useEffect(() => new SessionManager().observe((user) => {
     setSessionUser(user);
     if (user) void syncAccount(user).finally(loadDatabase); else setSyncStatus('offline');
@@ -95,7 +113,9 @@ export default function App() {
     setAuthBusy(true);
     setAuthError(null);
     try {
-      await new AuthService().signInWithGoogle();
+      const user = await new AuthService().signInWithGoogle();
+      AnalyticsService.track({ event: 'user_login', feature: 'authentication' });
+      if (user.metadata.creationTime === user.metadata.lastSignInTime) AnalyticsService.track({ event: 'user_signup', feature: 'authentication' });
     } catch (error) {
       setAuthError(getAuthErrorMessage(error));
     } finally {
@@ -107,6 +127,7 @@ export default function App() {
     setAuthError(null);
     try {
       await new AuthService().signOut();
+      AnalyticsService.track({ event: 'user_logout', feature: 'authentication' });
       isClearingAccount.current = true;
       cloudSync.stop();
       setSessionUser(null);
