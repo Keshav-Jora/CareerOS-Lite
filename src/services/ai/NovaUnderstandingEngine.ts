@@ -3,6 +3,7 @@ import { EntityRecognitionService } from './understanding/EntityRecognitionServi
 import { ExtractionService } from './understanding/ExtractionService';
 import { IntentService, type IntentConfidence } from './understanding/IntentService';
 import { ValidationService } from './understanding/ValidationService';
+import { logOpportunityDebug } from '../../utils/opportunityDebug';
 
 /** Orchestrates understanding only; execution belongs to ActionRouter. */
 export class NovaUnderstandingEngine {
@@ -16,6 +17,7 @@ export class NovaUnderstandingEngine {
 
   understand(message: string): ActionPlan {
     try {
+      logOpportunityDebug('Raw user message', 'src/services/ai/NovaUnderstandingEngine.ts', 'understand', message, message);
       const intentDetection = this.intents.detect(message);
       const entityDetection = this.entities.detectEntity(message, intentDetection.intent);
       const payload = this.extraction.extract(message, intentDetection.intent, entityDetection.entity);

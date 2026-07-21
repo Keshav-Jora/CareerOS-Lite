@@ -23,7 +23,6 @@ import ProgressView from './components/ProgressView';
 import CertificatesView from './components/CertificatesView';
 import NotesView from './components/NotesView';
 import SettingsView from './components/SettingsView';
-import ConnectionsView from './components/ConnectionsView';
 
 export default function App() {
   // Navigation View State
@@ -112,7 +111,7 @@ export default function App() {
             dailyMission={canonicalData?.missions.find((mission) => mission.date === new Date().toISOString().slice(0, 10))}
             onSaveMission={handleSaveMission}
             onDeleteMission={handleDeleteMission}
-            connections={canonicalData?.connections ?? []}
+            careerSnapshot={canonicalData}
           />
         );
       case 'nova':
@@ -197,10 +196,6 @@ export default function App() {
             authBusy={authBusy}
           />
         );
-      case 'connections':
-      case 'connections-gmail':
-      case 'connections-github':
-        return <ConnectionsView theme={theme} connections={canonicalData?.connections ?? []} focusProvider={currentView === 'connections-gmail' ? 'gmail' : currentView === 'connections-github' ? 'github' : undefined} onRefresh={loadDatabase} />;
       default:
         return <div className="text-white text-center py-20">View not found.</div>;
     }

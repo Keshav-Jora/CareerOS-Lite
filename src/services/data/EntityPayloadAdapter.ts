@@ -1,14 +1,19 @@
 import type { CanonicalEntity } from './CanonicalCareerRepository';
+import { logOpportunityDebug } from '../../utils/opportunityDebug';
 
 /** Converts partial AI payloads into repository-ready records without changing supplied values. */
 export class EntityPayloadAdapter {
   normalize(entity: CanonicalEntity, payload: Record<string, unknown>): Record<string, unknown> {
     const now = new Date().toISOString(); const id = typeof payload.id === 'string' ? payload.id : `${entity}-${Date.now()}`;
     const base = { ...payload, id, updatedAt: payload.updatedAt ?? now };
-    if (entity === 'opportunity') return { ...base, title: payload.title ?? 'Untitled opportunity', organization: payload.organization ?? '', category: payload.category ?? 'Internship', source: payload.source ?? 'Nova', applicationLink: payload.officialLink ?? payload.applicationLink ?? '', applyDate: payload.applicationDate ?? new Date().toISOString().slice(0, 10), deadline: payload.deadline ?? '', status: payload.status ?? 'Saved', priority: payload.priority ?? 'Medium', notes: payload.notes ?? '', skills: array(payload.skills), checklist: checklist(payload.checklist), tags: array(payload.tags) };
+    if (entity === 'opportunity') {
+      const result = { ...base, title: payload.title ?? 'Untitled opportunity', organization: payload.organization ?? '', category: payload.category ?? 'Internship', source: payload.source ?? 'Nova', applicationLink: payload.officialLink ?? payload.applicationLink ?? '', applyDate: payload.applicationDate ?? new Date().toISOString().slice(0, 10), deadline: payload.deadline ?? '', status: payload.status ?? 'Saved', priority: payload.priority ?? 'Medium', notes: payload.notes ?? '', skills: array(payload.skills), checklist: checklist(payload.checklist), tags: array(payload.tags) };
+      logOpportunityDebug('EntityPayloadAdapter', 'src/services/data/EntityPayloadAdapter.ts', 'normalize', { entity, payload }, result);
+      return result;
+    }
     if (entity === 'project') return { ...base, title: payload.title ?? 'Untitled project', description: payload.description ?? '', status: payload.status ?? 'idea', skills: array(payload.technologies ?? payload.skills), links: array(payload.links) };
     if (entity === 'goal') return { ...base, title: payload.title ?? 'Untitled goal', status: payload.status ?? 'active', priority: payload.priority ?? 'medium' };
-    if (entity === 'mission') return { ...base, title: payload.title ?? "Today's Mission", status: payload.status ?? 'open', date: payload.date ?? new Date().toISOString().slice(0, 10), tasks: missionTasks(payload.tasks ?? payload.checklist), duration: payload.duration ?? '45 min', priority: payload.priority ?? 'High' };
+    if (entity === 'mission') return { ...base, title: payload.title ?? 'Today’s Mission', status: payload.status ?? 'open', date: payload.date ?? new Date().toISOString().slice(0, 10), tasks: missionTasks(payload.tasks ?? payload.checklist), duration: payload.duration ?? '45 min', priority: payload.priority ?? 'High' };
     if (entity === 'learning') return { ...base, title: payload.title ?? 'Untitled learning item', status: payload.status ?? 'planned', progress: payload.progress ?? 0, skills: array(payload.skills) };
     if (entity === 'skill') return { ...base, name: payload.name ?? payload.title ?? 'Untitled skill', level: payload.level ?? 'beginner', tags: array(payload.tags) };
     if (entity === 'certification') return { ...base, name: payload.name ?? payload.title ?? 'Untitled certification', platform: payload.platform ?? '', date: payload.date ?? new Date().toISOString().slice(0, 10), category: payload.category ?? 'Certification', notes: payload.notes ?? '' };

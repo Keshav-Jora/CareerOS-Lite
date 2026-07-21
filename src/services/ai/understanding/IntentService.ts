@@ -1,3 +1,4 @@
+import { logOpportunityDebug } from '../../../utils/opportunityDebug';
 
 export type ActionIntent = 'create' | 'update' | 'delete' | 'archive' | 'restore' | 'complete' | 'search' | 'show' | 'summarize' | 'recommend' | 'explain' | 'prioritize';
 export type IntentConfidence = 'high' | 'medium' | 'low';
@@ -29,38 +30,47 @@ export class IntentService {
     const value = message.trim();
     if (!value) {
       const result = { intent: null, confidence: 'low' } as const;
+      logOpportunityDebug('IntentService', 'src/services/ai/understanding/IntentService.ts', 'detect', message, result);
       return result;
     }
     if (/^\s*today'?s mission\b/im.test(value)) {
       const result: IntentDetection = { intent: 'create', confidence: 'high' };
+      logOpportunityDebug('IntentService', 'src/services/ai/understanding/IntentService.ts', 'detect', message, result);
       return result;
     }
     if (/\b(?:i )?(?:completed|finished|done)\s+today'?s mission\b/i.test(value)) {
       const result: IntentDetection = { intent: 'complete', confidence: 'high' };
+      logOpportunityDebug('IntentService', 'src/services/ai/understanding/IntentService.ts', 'detect', message, result);
       return result;
     }
     if (/\b(?:today i need to|i need to do .*today|today'?s tasks? are|help me plan today)\b/i.test(value)) {
       const result: IntentDetection = { intent: 'create', confidence: 'high' };
+      logOpportunityDebug('IntentService', 'src/services/ai/understanding/IntentService.ts', 'detect', message, result);
       return result;
     }
     if (/\b(?:my goal is|i want (?:a|an|to become|to work at)|i aim to|my dream is|help me (?:track|get)|track my .*goal)\b/i.test(value)) {
       const result: IntentDetection = { intent: 'create', confidence: 'high' };
+      logOpportunityDebug('IntentService', 'src/services/ai/understanding/IntentService.ts', 'detect', message, result);
       return result;
     }
     if (/\b(?:i found|remember|store|save|track this|want to apply)\b.*\b(?:opportunity|intern(?:ship)?|job|fellowship|scholarship|application)\b/i.test(value)) {
       const result: IntentDetection = { intent: 'create', confidence: 'high' };
+      logOpportunityDebug('IntentService', 'src/services/ai/understanding/IntentService.ts', 'detect', message, result);
       return result;
     }
     if (/\b(?:don't want to track|do not want to track|stop tracking|forget this)\b/i.test(value)) {
       const result: IntentDetection = { intent: 'delete', confidence: 'high' };
+      logOpportunityDebug('IntentService', 'src/services/ai/understanding/IntentService.ts', 'detect', message, result);
       return result;
     }
     if (/\b(completed|finished|built|solved)\b/i.test(value)) {
       const result: IntentDetection = { intent: 'create', confidence: 'high' };
+      logOpportunityDebug('IntentService', 'src/services/ai/understanding/IntentService.ts', 'detect', message, result);
       return result;
     }
     if (/^\s*(update|change|changed|edit|set|modify|move)\b/i.test(value)) {
       const result: IntentDetection = { intent: 'update', confidence: 'high' };
+      logOpportunityDebug('IntentService', 'src/services/ai/understanding/IntentService.ts', 'detect', message, result);
       return result;
     }
     const scores = patterns.reduce<Map<ActionIntent, number>>((result, pattern) => {
@@ -70,10 +80,12 @@ export class IntentService {
     const ranked = [...scores.entries()].sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]));
     if (!ranked.length) {
       const result = { intent: null, confidence: 'low' } as const;
+      logOpportunityDebug('IntentService', 'src/services/ai/understanding/IntentService.ts', 'detect', message, result);
       return result;
     }
     const [intent, score] = ranked[0];
     const result: IntentDetection = { intent, confidence: score >= 3 ? 'high' : score === 2 ? 'medium' : 'low' };
+    logOpportunityDebug('IntentService', 'src/services/ai/understanding/IntentService.ts', 'detect', message, result);
     return result;
   }
 }

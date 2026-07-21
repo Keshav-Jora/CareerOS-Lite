@@ -7,6 +7,7 @@ import {
   ActivityLog,
   AppNotification,
 } from '../types';
+import { logOpportunityDebug } from './opportunityDebug';
 import type { ExternalConnection } from '../services/integrations/contracts/Connection';
 
 // Storage Keys
@@ -402,6 +403,7 @@ export const saveOpportunity = (opp: Opportunity): void => {
     addActivityLog('opportunity', `Created opportunity: ${opp.title} at ${opp.organization}`, opp.notes);
   }
   saveOpportunities(opps);
+  logOpportunityDebug('Storage', 'src/utils/storage.ts', 'saveOpportunity', opp, getOpportunities().find((item) => item.id === opp.id));
   updateDeadlineNotifications();
 };
 export const deleteOpportunity = (id: string): void => {

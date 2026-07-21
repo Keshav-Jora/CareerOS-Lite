@@ -4,13 +4,14 @@ import {
   ArrowRight,
   BrainCircuit,
   CalendarDays,
+  BriefcaseBusiness,
+  Award,
   Check,
   CheckCircle2,
   ChevronRight,
   CircleAlert,
   Clock3,
   FileText,
-  Flame,
   ListTodo,
   Plus,
   Search,
@@ -18,13 +19,12 @@ import {
   Sparkles,
   Target,
   TrendingUp,
+  FolderKanban,
 } from 'lucide-react';
 import type { ActivityLog, Certificate, DailyProgress, Note, Opportunity, TimelineEntry } from '../types';
-import type { CareerMission, MissionTask } from '../types/career-data';
+import type { CanonicalCareerData, CareerMission, MissionTask } from '../types/career-data';
 import { useDashboardIntelligence } from '../hooks/useDashboardIntelligence';
 import { CareerStatisticsService } from '../services/data/CareerStatisticsService';
-import ConnectionsWidget from './ConnectionsWidget';
-import type { ExternalConnection } from '../services/integrations/contracts/Connection';
 
 interface DashboardViewProps {
   theme: 'light' | 'dark';
@@ -46,7 +46,7 @@ interface DashboardViewProps {
   dailyMission?: CareerMission;
   onSaveMission: (mission: CareerMission) => void;
   onDeleteMission: (id: string) => void;
-  connections: ExternalConnection[];
+  careerSnapshot: CanonicalCareerData | null;
 }
 
 const quickActions = [
@@ -70,7 +70,7 @@ export default function DashboardView({
   dailyMission,
   onSaveMission,
   onDeleteMission,
-  connections,
+  careerSnapshot,
 }: DashboardViewProps) {
   const [missionComplete, setMissionComplete] = useState(false);
   const intelligence = useDashboardIntelligence({
@@ -83,6 +83,7 @@ export default function DashboardView({
     userName,
   });
   const statistics = new CareerStatisticsService().fromWorkspace({ opportunities, journey: timelineEntries, certifications: certificates });
+  const snapshotStatistics = careerSnapshot ? new CareerStatisticsService().fromSnapshot(careerSnapshot) : null;
   const { recommendation, featuredOpportunity } = intelligence;
   const isDark = theme === 'dark';
   const surface = isDark ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-white/90 shadow-sm';
@@ -93,18 +94,18 @@ export default function DashboardView({
     : `${intelligence.weeklyTrend > 0 ? '↑' : '↓'} ${Math.abs(intelligence.weeklyTrend)}h this week`;
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 pb-8">
+    <div className="mx-auto max-w-7xl space-y-7 pb-8">
       <header className="flex flex-col gap-4 px-1 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className={`text-sm font-medium ${mutedText}`}>{getGreeting()}, {userName}.</p>
-          <h1 className={`mt-1 font-display text-3xl font-bold tracking-tight sm:text-4xl ${headingText}`}>Your career, in motion.</h1>
+          <h1 className={`mt-1 font-display text-3xl font-bold tracking-tight sm:text-4xl ${headingText}`}>Your career command center.</h1>
           <p className={`mt-2 max-w-2xl text-sm leading-6 ${mutedText}`}>
-            Current focus: <span className={isDark ? 'font-semibold text-indigo-300' : 'font-semibold text-indigo-600'}>{recommendation.highestPriority.title}</span>
+            Keep goals, opportunities, and progress in one focused workspace. Current focus: <span className={isDark ? 'font-semibold text-indigo-300' : 'font-semibold text-indigo-600'}>{recommendation.highestPriority.title}</span>
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3 text-xs">
           <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 ${isDark ? 'border-slate-800 bg-slate-900 text-slate-400' : 'border-slate-200 bg-white text-slate-600'}`}>
-            <span className="relative flex h-2 w-2" aria-hidden="true"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" /><span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" /></span>
+            <span className="inline-flex h-2 w-2 rounded-full bg-emerald-400" aria-hidden="true" />
             AI analysis refreshed now
           </span>
           <button type="button" onClick={() => onNavigateToView('nova')} className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 font-semibold transition hover:border-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${isDark ? 'border-slate-700 bg-slate-900 text-slate-300' : 'border-slate-200 bg-white text-slate-700'}`}>
@@ -174,12 +175,7 @@ export default function DashboardView({
       <div className="grid gap-6 xl:grid-cols-2">
         <DailyMissionCard theme={theme} mission={dailyMission} fallbackTitle={recommendation.todayMission.title} fallbackDescription={recommendation.todayMission.description} fallbackPriority={recommendation.todayMission.priority} fallbackDuration={intelligence.estimatedDuration} onSave={onSaveMission} onDelete={onDeleteMission} />
 
-        <section className={`rounded-3xl border p-6 ${surface}`} aria-labelledby="highest-priority-title">
-          <div className="flex items-center gap-2 text-sm font-semibold text-rose-400"><Flame className="h-4 w-4" aria-hidden="true" /> Highest priority</div>
-          <h2 id="highest-priority-title" className={`mt-3 font-display text-xl font-bold ${headingText}`}>{recommendation.highestPriority.title}</h2>
-          <p className={`mt-3 text-sm leading-6 ${mutedText}`}>{recommendation.highestPriority.rationale}</p>
-          <button type="button" onClick={() => onNavigateToView('nova')} className={`mt-5 inline-flex items-center gap-2 text-sm font-semibold ${isDark ? 'text-indigo-300 hover:text-indigo-200' : 'text-indigo-600 hover:text-indigo-700'} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400`}>Explore the plan with Nova <ArrowRight className="h-4 w-4" aria-hidden="true" /></button>
-        </section>
+        <CareerSnapshot theme={theme} statistics={snapshotStatistics} progressEntries={progress.length} onNavigate={onNavigateToView} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(300px,0.75fr)]">
@@ -191,17 +187,13 @@ export default function DashboardView({
         <section className={`rounded-3xl border p-6 ${surface}`} aria-labelledby="momentum-title">
           <div className="flex items-center gap-2 text-sm font-semibold text-emerald-400"><TrendingUp className="h-4 w-4" aria-hidden="true" /> Learning momentum</div>
           <h2 id="momentum-title" className={`mt-3 font-display text-xl font-bold ${headingText}`}>{intelligence.streak} day learning streak</h2>
-          <p className={`mt-2 text-sm ${mutedText}`}>{intelligence.weeklyProgress}% of this week has recorded learning activity.</p>
-          <div className={`mt-5 h-3 overflow-hidden rounded-full ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`} aria-label={`${intelligence.weeklyProgress}% weekly learning progress`} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={intelligence.weeklyProgress}><motion.div initial={{ width: 0 }} animate={{ width: `${intelligence.weeklyProgress}%` }} transition={{ duration: 0.7, ease: 'easeOut' }} className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-teal-400" /></div>
-          <div className="mt-5 flex items-end gap-1.5" aria-label="Seven-day activity visualization">{Array.from({ length: 7 }, (_, index) => <motion.span key={index} initial={{ scaleY: 0 }} animate={{ scaleY: 0.35 + ((intelligence.weeklyProgress / 100) * ((index % 3) + 1) / 3) }} transition={{ duration: 0.35, delay: index * 0.05 }} className={`h-10 flex-1 origin-bottom rounded-sm ${isDark ? 'bg-emerald-400/45' : 'bg-emerald-400/60'}`} />)}</div>
+          {progress.length > 0 ? <><p className={`mt-2 text-sm ${mutedText}`}>{intelligence.weeklyProgress}% of this week has recorded learning activity.</p><div className={`mt-5 h-3 overflow-hidden rounded-full ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`} aria-label={`${intelligence.weeklyProgress}% weekly learning progress`} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={intelligence.weeklyProgress}><motion.div initial={{ width: 0 }} animate={{ width: `${intelligence.weeklyProgress}%` }} transition={{ duration: 0.7, ease: 'easeOut' }} className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-teal-400" /></div><div className="mt-5 flex items-end gap-1.5" aria-label="Seven-day activity visualization">{Array.from({ length: 7 }, (_, index) => <span key={index} className={`h-10 flex-1 rounded-sm ${isDark ? 'bg-emerald-400/45' : 'bg-emerald-400/60'}`} style={{ transform: `scaleY(${0.35 + ((intelligence.weeklyProgress / 100) * ((index % 3) + 1) / 3)})`, transformOrigin: 'bottom' }} />)}</div></> : <EmptyMomentumState isDark={isDark} onLog={() => onNavigateToView('progress')} />}
         </section>
       </div>
 
       <section className={`rounded-3xl border p-6 ${surface}`} aria-labelledby="decision-memory-title">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center"><div><div className="flex items-center gap-2 text-sm font-semibold text-fuchsia-400"><Sparkles className="h-4 w-4" aria-hidden="true" /> Decision memory</div><h2 id="decision-memory-title" className={`mt-2 font-display text-lg font-bold ${headingText}`}>{recommendation.nextBestAction.title}</h2><p className={`mt-1 text-sm ${mutedText}`}>{intelligence.latestActivity ? `Latest recorded outcome: ${intelligence.latestActivity.action}` : 'Outcome tracking begins when you log progress in your Journey.'}</p></div><button type="button" onClick={() => onNavigateToView('journey')} className={`inline-flex items-center gap-2 text-sm font-semibold ${isDark ? 'text-indigo-300 hover:text-indigo-200' : 'text-indigo-600 hover:text-indigo-700'} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400`}>Open Journey <ArrowRight className="h-4 w-4" aria-hidden="true" /></button></div>
       </section>
-
-      <ConnectionsWidget theme={theme} connections={connections} onOpen={() => onNavigateToView('connections')} />
 
       <section aria-labelledby="quick-actions-title"><div className="mb-3 flex items-center gap-2 px-1"><ListTodo className="h-4 w-4 text-indigo-400" aria-hidden="true" /><h2 id="quick-actions-title" className={`font-display text-lg font-bold ${headingText}`}>Quick actions</h2></div><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{quickActions.map((action) => { const Icon = action.icon; const onClick = action.destination === 'opportunities' ? onAddOpportunityTrigger : () => onNavigateToView(action.destination); return <motion.button type="button" whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }} key={action.label} onClick={onClick} className={`group flex items-center gap-4 rounded-2xl border p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${surface}`}><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-300 transition group-hover:bg-indigo-500/20"><Icon className="h-5 w-5" aria-hidden="true" /></span><span className="min-w-0 flex-1"><span className={`block text-sm font-semibold ${headingText}`}>{action.label}</span><span className={`mt-0.5 block text-xs ${mutedText}`}>{action.description}</span></span><ChevronRight className={`h-4 w-4 ${isDark ? 'text-slate-600' : 'text-slate-400'}`} aria-hidden="true" /></motion.button>; })}</div></section>
 
@@ -258,6 +250,18 @@ function DailyMissionCard({ theme, mission, fallbackTitle, fallbackDescription, 
   </section>;
 }
 
+function CareerSnapshot({ theme, statistics, progressEntries, onNavigate }: { theme: 'light' | 'dark'; statistics: ReturnType<CareerStatisticsService['fromSnapshot']> | null; progressEntries: number; onNavigate: (view: string) => void }) {
+  const isDark = theme === 'dark';
+  const items = [
+    { label: 'Opportunities', value: statistics?.opportunities ?? 0, icon: BriefcaseBusiness, destination: 'opportunities' },
+    { label: 'Goals', value: statistics?.activeGoals ?? 0, icon: Target, destination: 'journey' },
+    { label: 'Projects', value: statistics?.projects ?? 0, icon: FolderKanban, destination: 'journey' },
+    { label: 'Certifications', value: statistics?.certifications ?? 0, icon: Award, destination: 'certificates' },
+    { label: 'Progress entries', value: progressEntries, icon: TrendingUp, destination: 'progress' },
+  ];
+  return <section className={`rounded-3xl border p-6 ${isDark ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-white/90 shadow-sm'}`} aria-labelledby="career-snapshot-title"><div className="flex items-center justify-between gap-4"><div><div className="flex items-center gap-2 text-sm font-semibold text-sky-400"><ShieldCheck className="h-4 w-4" aria-hidden="true" /> Career snapshot</div><h2 id="career-snapshot-title" className={`mt-2 font-display text-xl font-bold ${isDark ? 'text-white' : 'text-slate-950'}`}>Your tracked career data</h2></div><span className="text-xs text-slate-400">Live repository view</span></div><div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-5">{items.map((item) => { const Icon = item.icon; return <button type="button" key={item.label} onClick={() => onNavigate(item.destination)} className={`min-h-24 rounded-2xl border p-3 text-left transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${isDark ? 'border-slate-800 bg-slate-950/35 hover:border-slate-700' : 'border-slate-200 bg-slate-50 hover:border-slate-300'}`}><Icon className="h-4 w-4 text-indigo-400" aria-hidden="true" /><p className={`mt-3 text-xl font-bold tabular-nums ${isDark ? 'text-white' : 'text-slate-950'}`}>{item.value}</p><p className="mt-1 text-[11px] font-medium leading-4 text-slate-400">{item.label}</p></button>; })}</div></section>;
+}
+function EmptyMomentumState({ isDark, onLog }: { isDark: boolean; onLog: () => void }) { return <div className={`mt-5 rounded-2xl border border-dashed p-5 ${isDark ? 'border-slate-700 bg-slate-950/30' : 'border-slate-300 bg-slate-50'}`}><CircleAlert className="h-5 w-5 text-emerald-400" aria-hidden="true" /><p className={`mt-3 text-sm font-semibold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>No progress logged this week</p><p className={`mt-1 text-sm ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Log one focused session to start building a visible learning rhythm.</p><button type="button" onClick={onLog} className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-indigo-400 hover:text-indigo-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400">Log practice <ArrowRight className="h-4 w-4" aria-hidden="true" /></button></div>; }
 function MetricPill({ label, value, isDark }: { label: string; value: string; isDark: boolean }) { return <span className={`rounded-xl border px-3 py-2 text-xs ${isDark ? 'border-slate-700 bg-slate-950/30 text-slate-300' : 'border-slate-200 bg-white text-slate-700'}`}><span className={`mr-1.5 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>{label}</span><span className="font-semibold">{value}</span></span>; }
 function RecommendationMetric({ label, value, isDark }: { label: string; value: string; isDark: boolean }) { return <div className={`rounded-xl border p-3 ${isDark ? 'border-slate-800 bg-slate-950/35' : 'border-slate-200 bg-slate-50'}`}><p className={`text-[11px] font-semibold uppercase tracking-wide ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>{label}</p><p className={`mt-1 text-sm font-semibold capitalize ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{value}</p></div>; }
 function MissionMetric({ label, value }: { label: string; value: string }) { return <div className="min-w-0 px-3 py-3 text-center"><p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{label}</p><p className="mt-1 truncate text-xs font-semibold text-slate-300">{value}</p></div>; }

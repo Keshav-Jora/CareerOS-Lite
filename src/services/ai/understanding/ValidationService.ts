@@ -1,6 +1,7 @@
 import type { ActionIntent } from './IntentService';
 import type { ActionEntity } from './EntityRecognitionService';
 import type { ExtractedPayload } from './ExtractionService';
+import { logOpportunityDebug } from '../../../utils/opportunityDebug';
 
 export type ValidationCode = 'required' | 'invalid-format' | 'invalid-value' | 'unsupported';
 export interface ActionValidationIssue { field?: string; code: ValidationCode; message: string; }
@@ -18,6 +19,7 @@ export class ValidationService {
     if (!entity || !intent) {
       const action = intent === 'delete' ? 'delete' : intent === 'update' ? 'update' : 'complete';
       const result: ActionValidation = { valid: false, normalized: false, issues: [{ code: 'unsupported', message: `I couldn't determine which item you want to ${action}. Please specify its title.` }] };
+      logOpportunityDebug('ValidationService', 'src/services/ai/understanding/ValidationService.ts', 'validate', { intent, entity, payload }, result);
       return result;
     }
     const requiresTitle = intent === 'create' || (intent === 'update' && entity !== 'opportunity');
@@ -27,6 +29,7 @@ export class ValidationService {
     this.url(payload, 'officialLink', issues); this.url(payload, 'repository', issues); this.url(payload, 'demo', issues);
     this.array(payload, 'checklist', issues); this.array(payload, 'skills', issues); this.array(payload, 'tags', issues);
     const result: ActionValidation = { valid: issues.length === 0, normalized: issues.length === 0, issues };
+    logOpportunityDebug('ValidationService', 'src/services/ai/understanding/ValidationService.ts', 'validate', { intent, entity, payload }, result);
     return result;
   }
   private text(value: unknown): boolean { return typeof value === 'string' && value.trim().length > 0; }

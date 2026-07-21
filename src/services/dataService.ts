@@ -1,4 +1,4 @@
-import * as storage from '../utils/storage';
+import { CanonicalCareerRepository } from './data/CanonicalCareerRepository';
 import {
   Opportunity,
   TimelineEntry,
@@ -27,19 +27,14 @@ export interface AppDatabasePayload {
  * Prepares architecture for future backend API calls (REST/Firebase/Supabase)
  */
 export const dataService = {
+  repository: new CanonicalCareerRepository(),
   initialize(): void {
-    storage.initializeStorage();
+    this.repository.initialize();
   },
 
   fetchAllData(): AppDatabasePayload {
     return {
-      opportunities: storage.getOpportunities(),
-      timelineEntries: storage.getTimelineEntries(),
-      progressData: storage.getDailyProgress(),
-      certificates: storage.getCertificates(),
-      notes: storage.getNotes(),
-      notifications: storage.getNotifications(),
-      activities: storage.getActivityLogs(),
+      opportunities: this.repository.getOpportunities(), timelineEntries: this.repository.getJourney(), progressData: this.repository.getProgress(), certificates: this.repository.getCertifications(), notes: this.repository.getNotes(), notifications: this.repository.getNotifications(), activities: this.repository.getActivities(),
       userName: localStorage.getItem('career_os_user_name') || 'Student',
       userSchool: localStorage.getItem('career_os_user_school') || 'Not Set',
       userGrad: localStorage.getItem('career_os_user_grad') || 'Not Set',
@@ -48,56 +43,56 @@ export const dataService = {
 
   // Opportunities
   saveOpportunity(opp: Opportunity): void {
-    storage.saveOpportunity(opp);
+    this.repository.saveOpportunity(opp);
   },
 
   deleteOpportunity(id: string): void {
-    storage.deleteOpportunity(id);
+    this.repository.deleteOpportunity(id);
   },
 
   // Timeline
   saveTimelineEntry(entry: TimelineEntry): void {
-    storage.saveTimelineEntry(entry);
+    this.repository.saveJourney(entry);
   },
 
   deleteTimelineEntry(id: string): void {
-    storage.deleteTimelineEntry(id);
+    this.repository.deleteJourney(id);
   },
 
   // Daily Progress
   updateDailyProgress(progress: DailyProgress): void {
-    storage.updateDailyProgress(progress);
+    this.repository.saveProgress(progress);
   },
 
   // Certificates
   saveCertificate(cert: Certificate): void {
-    storage.saveCertificate(cert);
+    this.repository.saveCertification(cert);
   },
 
   deleteCertificate(id: string): void {
-    storage.deleteCertificate(id);
+    this.repository.deleteCertification(id);
   },
 
   // Notes
   saveNote(note: Note): void {
-    storage.saveNote(note);
+    this.repository.saveNote(note);
   },
 
   deleteNote(id: string): void {
-    storage.deleteNote(id);
+    this.repository.deleteNote(id);
   },
 
   // Notifications
   markNotificationRead(id: string): void {
-    storage.markNotificationRead(id);
+    this.repository.markNotificationRead(id);
   },
 
   // Account Reset / Seed Data
   resetData(): void {
-    storage.resetStorageData();
+    this.repository.reset();
   },
 
   loadSeedData(): void {
-    storage.loadSeedData();
+    this.repository.loadSeedData();
   },
 };

@@ -5,6 +5,7 @@ import type { NovaActionIntent, NovaActionResult } from './ActionTypes';
 import type { ActionPlan, ActionOperation } from '../ai/understanding/ActionPlanBuilder';
 import type { CanonicalEntity } from '../data/CanonicalCareerRepository';
 import { EntityPayloadAdapter } from '../data/EntityPayloadAdapter';
+import { logOpportunityDebug } from '../../utils/opportunityDebug';
 
 export interface ActionPlanExecutionResult {
   success: boolean;

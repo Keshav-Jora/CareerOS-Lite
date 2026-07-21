@@ -1,4 +1,5 @@
 import type { ActionIntent, IntentConfidence } from './IntentService';
+import { logOpportunityDebug } from '../../../utils/opportunityDebug';
 
 export type ActionEntity = 'opportunity' | 'journey' | 'project' | 'goal' | 'mission' | 'learning' | 'skill' | 'note' | 'certification';
 export interface EntityDetection { entity: ActionEntity | null; confidence: IntentConfidence; }
@@ -23,30 +24,37 @@ export class EntityRecognitionService {
   detectEntity(message: string, intent?: ActionIntent | null): EntityDetection {
     if (!message.trim()) {
       const result = { entity: null, confidence: 'low' } as const;
+      logOpportunityDebug('EntityRecognitionService', 'src/services/ai/understanding/EntityRecognitionService.ts', 'detectEntity', { message, intent }, result);
       return result;
     }
     if (/\b(?:completed|finished|done)\s+today'?s mission\b/i.test(message)) {
       const result: EntityDetection = { entity: 'mission', confidence: 'high' };
+      logOpportunityDebug('EntityRecognitionService', 'src/services/ai/understanding/EntityRecognitionService.ts', 'detectEntity', { message, intent }, result);
       return result;
     }
     if (/\b(?:my goal is|i want (?:a|an|to become|to work at)|i aim to|my dream is|help me (?:track|get)|track my .*goal)\b/i.test(message)) {
       const result: EntityDetection = { entity: 'goal', confidence: 'high' };
+      logOpportunityDebug('EntityRecognitionService', 'src/services/ai/understanding/EntityRecognitionService.ts', 'detectEntity', { message, intent }, result);
       return result;
     }
     if (/\b(?:today i need to|i need to do .*today|today'?s tasks? are|help me plan today)\b/i.test(message)) {
       const result: EntityDetection = { entity: 'mission', confidence: 'high' };
+      logOpportunityDebug('EntityRecognitionService', 'src/services/ai/understanding/EntityRecognitionService.ts', 'detectEntity', { message, intent }, result);
       return result;
     }
     if (/\b(?:i found|remember|store|save|track this|want to apply|don't want to track|do not want to track|stop tracking|forget this)\b.*\b(?:opportunity|intern(?:ship)?|job|fellowship|scholarship|application)\b/i.test(message)) {
       const result: EntityDetection = { entity: 'opportunity', confidence: 'high' };
+      logOpportunityDebug('EntityRecognitionService', 'src/services/ai/understanding/EntityRecognitionService.ts', 'detectEntity', { message, intent }, result);
       return result;
     }
     if (intent === 'update' && /\bdeadline\s+(?:changed|change|moved|move|updated|update)\b/i.test(message)) {
       const result: EntityDetection = { entity: 'opportunity', confidence: 'high' };
+      logOpportunityDebug('EntityRecognitionService', 'src/services/ai/understanding/EntityRecognitionService.ts', 'detectEntity', { message, intent }, result);
       return result;
     }
     if (intent === 'create' && /\b(completed|finished|built|solved)\b/i.test(message)) {
       const result: EntityDetection = { entity: 'journey', confidence: 'high' };
+      logOpportunityDebug('EntityRecognitionService', 'src/services/ai/understanding/EntityRecognitionService.ts', 'detectEntity', { message, intent }, result);
       return result;
     }
     const scores = rules.reduce<Map<ActionEntity, number>>((result, rule) => {
@@ -56,10 +64,12 @@ export class EntityRecognitionService {
     const ranked = [...scores.entries()].sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]));
     if (!ranked.length) {
       const result = { entity: null, confidence: 'low' } as const;
+      logOpportunityDebug('EntityRecognitionService', 'src/services/ai/understanding/EntityRecognitionService.ts', 'detectEntity', { message, intent }, result);
       return result;
     }
     const [entity, score] = ranked[0];
     const result: EntityDetection = { entity, confidence: score >= 3 ? 'high' : score === 2 ? 'medium' : 'low' };
+    logOpportunityDebug('EntityRecognitionService', 'src/services/ai/understanding/EntityRecognitionService.ts', 'detectEntity', { message, intent }, result);
     return result;
   }
 }

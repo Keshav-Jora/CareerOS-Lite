@@ -2,6 +2,7 @@ import type { ActionEntity } from './EntityRecognitionService';
 import type { ExtractedPayload } from './ExtractionService';
 import type { ActionIntent, IntentConfidence } from './IntentService';
 import type { ActionValidation } from './ValidationService';
+import { logOpportunityDebug } from '../../../utils/opportunityDebug';
 
 export type ActionOperation = 'create' | 'update' | 'delete' | 'archive' | 'restore' | 'complete' | 'query';
 export interface ActionPlan { id: string; intent: ActionIntent | null; entity: ActionEntity | null; operation: ActionOperation; payload: ExtractedPayload; confidence: IntentConfidence; validation: ActionValidation; requiresConfirmation: boolean; sourceMessage: string; createdAt: string; }
@@ -13,6 +14,8 @@ const operationByIntent: Partial<Record<ActionIntent, ActionOperation>> = { crea
 export class ActionPlanBuilder {
   build(input: ActionPlanInput): ActionPlan {
     const operation = input.intent ? operationByIntent[input.intent] ?? 'query' : 'query';
-    return { id: `plan-${Date.now()}`, intent: input.intent, entity: input.entity, operation, payload: { ...input.payload }, confidence: input.confidence, validation: input.validation, requiresConfirmation: input.confidence === 'low' || !input.validation.valid || operation === 'delete', sourceMessage: input.message, createdAt: new Date().toISOString() };
+    const result = { id: `plan-${Date.now()}`, intent: input.intent, entity: input.entity, operation, payload: { ...input.payload }, confidence: input.confidence, validation: input.validation, requiresConfirmation: input.confidence === 'low' || !input.validation.valid || operation === 'delete', sourceMessage: input.message, createdAt: new Date().toISOString() };
+    logOpportunityDebug('ActionPlanBuilder', 'src/services/ai/understanding/ActionPlanBuilder.ts', 'build', input, result);
+    return result;
   }
 }

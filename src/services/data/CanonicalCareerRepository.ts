@@ -2,6 +2,7 @@ import * as storage from '../../utils/storage';
 import type { CanonicalCareerData, CareerGoal, CareerLearning, CareerMission, CareerProject, CareerSkill } from '../../types/career-data';
 import type { ActivityLog, AppNotification, Certificate, DailyProgress, Note, Opportunity, Task, TimelineEntry } from '../../types';
 import type { ExternalConnection } from '../integrations/contracts/Connection';
+import { logOpportunityDebug } from '../../utils/opportunityDebug';
 
 export type CanonicalEntity = 'opportunity' | 'project' | 'goal' | 'mission' | 'learning' | 'skill' | 'certification' | 'note' | 'journey' | 'connection';
 type CanonicalRecord = { id: string };

@@ -1,5 +1,6 @@
 import type { ActionIntent } from './IntentService';
 import type { ActionEntity } from './EntityRecognitionService';
+import { logOpportunityDebug } from '../../../utils/opportunityDebug';
 
 export type ExtractedPayload = Record<string, unknown>;
 const knownSkills = ['DSA', 'SQL', 'React', 'Docker', 'AWS', 'TypeScript', 'JavaScript', 'Python', 'Java', 'Node.js', 'Git', 'Cloud'];
@@ -9,6 +10,7 @@ export class ExtractionService {
   extract(message: string, _intent: ActionIntent | null, entity: ActionEntity | null): ExtractedPayload {
     if (!entity) {
       const result = {};
+      logOpportunityDebug('ExtractionService', 'src/services/ai/understanding/ExtractionService.ts', 'extract', { message, intent: _intent, entity }, result);
       return result;
     }
     const base = { skills: this.skills(message), links: this.links(message), tags: this.tags(message), checklist: this.checklist(message) };
@@ -20,6 +22,7 @@ export class ExtractionService {
     else if (entity === 'mission') result = this.parsedMission(message, base);
     else if (entity === 'journey') result = this.journey(message);
     else result = { ...base, title: this.title(message) };
+    logOpportunityDebug('ExtractionService', 'src/services/ai/understanding/ExtractionService.ts', 'extract', { message, intent: _intent, entity }, result);
     return result;
   }
 

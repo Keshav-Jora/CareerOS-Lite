@@ -22,8 +22,6 @@ import {
   Menu,
   X,
   ChevronRight,
-  Mail,
-  Github,
 } from 'lucide-react';
 import { AppNotification } from '../types';
 
@@ -74,8 +72,6 @@ export default function MobileNavigation({
     { id: 'progress', label: 'Velocity Progress', icon: TrendingUp },
     { id: 'certificates', label: 'Certificates', icon: Award },
     { id: 'notes', label: 'Knowledge Hub', icon: FileText },
-    { id: 'connections-gmail', label: 'Connections · Gmail', icon: Mail },
-    { id: 'connections-github', label: 'Connections · GitHub', icon: Github },
   ];
 
   // ONLY 5 bottom navigation items as explicitly requested: Home, Opportunities, Journey, Nova, Profile

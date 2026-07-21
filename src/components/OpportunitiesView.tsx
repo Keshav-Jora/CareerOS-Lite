@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Opportunity, CategoryType, StatusType, PriorityType } from '../types';
+import { logOpportunityDebug } from '../utils/opportunityDebug';
 
 interface OpportunitiesViewProps {
   theme: 'light' | 'dark';
@@ -192,6 +193,9 @@ export default function OpportunitiesView({
   onSaveOpportunity,
   onDeleteOpportunity,
 }: OpportunitiesViewProps) {
+  React.useEffect(() => {
+    logOpportunityDebug('OpportunitiesView', 'src/components/OpportunitiesView.tsx', 'OpportunitiesView render', opportunities, opportunities);
+  }, [opportunities]);
   // Filters & State
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
