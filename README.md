@@ -1,201 +1,65 @@
 # CareerOS Lite
 
-A frontend-first Career Operating System built for students and aspiring developers to organize internships, hackathons, certifications, coding progress, notes, and career activities in one place.
+CareerOS Lite is a React and Firebase career workspace for tracking opportunities, goals, projects, progress, certificates, notes, and career milestones. Nova provides conversational assistance with multi-provider AI routing and streaming responses.
 
----
+## Product capabilities
 
-## 🚀 Live Demo
+- Career dashboard with recommendations, progress, and repository-backed statistics
+- Opportunity, journey, progress, certificate, note, and goal management
+- Nova workspace with persisted conversations, streaming, provider/model metadata, and provider fallback
+- Google authentication and per-user cloud sync through Firebase
+- Optional product analytics stored in `analytics_events`
+- Internal owner console at `/admin` for configured admin email addresses
 
-**🌐 Live Website:**  
-https://career-os-lite.vercel.app/
+## Requirements
 
-**💻 GitHub Repository:**  
-https://github.com/Keshav-Jora/CareerOS-Lite
+- Node.js 20 or newer
+- A Firebase project with Authentication and Cloud Firestore enabled
+- At least one configured AI provider key for Nova
 
----
-
-## 📖 Project Overview
-
-CareerOS Lite is a responsive productivity dashboard that helps students manage their career journey. It brings together internship tracking, coding progress, certifications, notes, and career milestones into a single, easy-to-use interface.
-
-The application is privacy-focused and stores user data locally in the browser using LocalStorage, allowing users to manage their career information without requiring an account or backend server.
-
----
-
-## ✨ Features
-
-- 📊 Dashboard with career overview and progress summary
-- 💼 Opportunity Tracker for internships, jobs, hackathons and fellowships
-- 📅 Upcoming Deadlines and Calendar view
-- 🛣️ Journey Timeline for recording career milestones
-- 📈 Progress Analytics with charts and activity tracking
-- 🏆 Certificate Vault for organizing achievements
-- 📝 Notes Hub for interview preparation and study notes
-- 🎯 XP & Streak system for motivation and consistency
-- 📱 Fully Responsive UI for desktop and mobile devices
-- 💾 LocalStorage-based data persistence
-- 🤖 Rule-Based Assistant for productivity guidance
-
----
-
-## 📸 Screenshots
-
-### Dashboard
-
-![Dashboard](assets/screenshots/Dashboard.png)
-
-### Certificates
-
-![Certificates](assets/screenshots/Certificates.png)
-
-### Progress
-
-![Progress](assets/screenshots/Progress.png)
-
----
-
-## 🛠️ Tech Stack
-
-- React 18
-- TypeScript
-- Vite
-- Tailwind CSS
-- Motion
-- Lucide React
-- Recharts
-- Canvas Confetti
-
----
-
-## 🏗️ Architecture
-
-CareerOS Lite follows a modular frontend architecture.
-
-```
-React UI
-    │
-    ▼
-Custom Hooks
-    │
-    ▼
-Service Layer
-    │
-    ▼
-LocalStorage
-```
-
-The project separates UI components, business logic, and storage to keep the codebase organized and maintainable.
-
----
-
-## ⚙️ Installation
-
-### Clone the repository
-
-```bash
-git clone https://github.com/Keshav-Jora/CareerOS-Lite.git
-cd CareerOS-Lite
-```
-
-### Install dependencies
+## Setup
 
 ```bash
 npm install
-```
-
-### Start the development server
-
-```bash
+copy .env.example .env
 npm run dev
 ```
 
-Open:
+The development server runs at `http://localhost:3000`.
 
-```
-http://localhost:5173
-```
+Set the Firebase configuration values and at least one provider key in `.env`. Vite reads environment files when it starts, so restart the development server after changing `.env`.
 
-### Build for production
+## Environment variables
+
+| Variable | Purpose |
+| --- | --- |
+| `VITE_FIREBASE_*` | Firebase web application configuration |
+| `VITE_GEMINI_API_KEY` | Gemini provider key |
+| `VITE_GROQ_API_KEY` | Groq provider key (optional fallback) |
+| `VITE_OPENROUTER_API_KEY` | OpenRouter provider key (optional fallback) |
+| `VITE_CEREBRAS_API_KEY` | Cerebras provider key (optional fallback) |
+| `ENABLE_ANALYTICS` | Set to `true` to enable non-blocking analytics writes |
+| `VITE_ADMIN_EMAILS` | Comma-separated emails allowed to access `/admin` |
+
+Never commit `.env` or provider secrets.
+
+## Firebase release requirements
+
+Firebase security rules are deployment configuration and must be maintained with the Firebase project. Before public release, verify rules permit an authenticated user to read/write only their own `careerData/{uid}` document and permit only the intended analytics/admin access for `analytics_events`.
+
+The `/admin` route has a client-side email allowlist for UX. Firestore security rules must independently enforce analytics access; client-side checks alone are not a security boundary.
+
+## Validation
 
 ```bash
+npm run lint
 npm run build
 ```
 
----
+## Deployment
 
-## 📂 Project Structure
+The app is a Vite static build. Configure the same environment variables in the deployment platform, run `npm run build`, and serve `dist`. Configure SPA rewrites so `/admin` resolves to `index.html`.
 
-```
-CareerOS-Lite
-│
-├── assets/
-│   └── screenshots/
-├── src/
-│   ├── components/
-│   ├── hooks/
-│   ├── services/
-│   ├── utils/
-│   └── main.tsx
-│
-├── public/
-├── package.json
-└── README.md
-```
+## Architecture
 
----
-
-## 🔒 Privacy
-
-CareerOS Lite stores user data locally in the browser using LocalStorage.
-
-No user data is transmitted to external servers.
-
-Each user's data remains on their own device.
-
----
-
-## 📌 Current Status
-
-CareerOS Lite is currently a frontend-first application designed for personal career management with local browser storage.
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome.
-
-1. Fork this repository.
-2. Create a feature branch.
-
-```bash
-git checkout -b feature/your-feature
-```
-
-3. Commit your changes.
-
-```bash
-git commit -m "Add your feature"
-```
-
-4. Push your branch.
-
-```bash
-git push origin feature/your-feature
-```
-
-5. Open a Pull Request.
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License.
-
----
-
-## 👨‍💻 Author
-
-**Keshav Jora**
-
-GitHub:
-https://github.com/Keshav-Jora
+The UI calls focused hooks and services. Provider selection, streaming, and fallback remain behind the AI provider boundary; career data remains behind the repository and cloud-sync services. Analytics writes are fire-and-forget and use the existing `analytics_events` collection only.

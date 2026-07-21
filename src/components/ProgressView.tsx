@@ -35,6 +35,7 @@ import {
   PolarAngleAxis,
   PolarRadiusAxis,
   Radar,
+  type TooltipContentProps,
 } from 'recharts';
 import { DailyProgress } from '../types';
 import EmptyState from './EmptyState';
@@ -261,14 +262,14 @@ export default function ProgressView({
   }));
 
   // Custom Chart Tooltip
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({ active, payload, label }: Partial<TooltipContentProps<number, string>>) => {
     if (active && payload && payload.length) {
       return (
         <div className={`p-3 rounded-lg border text-xs ${
           theme === 'dark' ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-800'
         } backdrop-blur-md shadow-xl font-mono`}>
           <p className="font-bold mb-1.5">{label}</p>
-          {payload.map((item: any, idx: number) => (
+          {payload.map((item, idx) => (
             <p key={idx} className="flex justify-between gap-4 py-0.5">
               <span className="text-slate-400">{item.name}:</span>
               <span className="font-semibold" style={{ color: item.color }}>{item.value}</span>

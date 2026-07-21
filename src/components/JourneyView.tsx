@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import confetti from 'canvas-confetti';
 import {
   Milestone,
   Plus,
@@ -76,15 +77,7 @@ export default function JourneyView({
     };
 
     if (isMajorMilestone) {
-      // Trigger interactive milestone celebrations!
-      const win = window as any;
-      if (typeof win.confetti === 'function') {
-        win.confetti({
-          particleCount: 150,
-          spread: 80,
-          origin: { y: 0.6 },
-        });
-      }
+      void confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
     }
 
     onAddTimelineEntry(newEntry);
