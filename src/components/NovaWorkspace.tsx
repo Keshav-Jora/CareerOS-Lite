@@ -5,7 +5,10 @@ import {
   BriefcaseBusiness,
   CalendarClock,
   CheckCircle2,
+  CircleAlert,
   FileText,
+  Gauge,
+  Hourglass,
   Milestone,
   Sparkles,
   TrendingUp,
@@ -41,7 +44,8 @@ export default function NovaWorkspace({
   onNavigateToView,
 }: NovaWorkspaceProps) {
   const nova = useNovaWorkspace({ opportunities, progress, certificates, timeline });
-  const primaryAction = nova.actionForRecommendation(nova.topRecommendation);
+  const recommendation = nova.recommendations[0];
+  const primaryAction = recommendation ? nova.actionForRecommendation(recommendation) : null;
   const isDark = theme === 'dark';
 
   return (
@@ -91,27 +95,45 @@ export default function NovaWorkspace({
       <div className="grid gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(440px,1.1fr)]">
         <div className="space-y-6">
           <section className={`rounded-3xl border p-6 ${isDark ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-white/85'}`} aria-labelledby="nova-priority-title">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2 text-sm font-semibold text-indigo-300">
-                <Sparkles className="h-4 w-4" aria-hidden="true" />
-                Primary recommendation
-              </div>
-              <span className="rounded-full bg-indigo-500/10 px-2.5 py-1 text-xs font-semibold text-indigo-300">
-                {Math.round(nova.topRecommendation.confidence * 100)}% confidence
-              </span>
-            </div>
-            <h2 id="nova-priority-title" className={`mt-4 font-display text-2xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
-              {nova.topRecommendation.title}
-            </h2>
-            <p className={`mt-3 text-sm leading-6 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{nova.topRecommendation.description}</p>
-            <button
-              type="button"
-              onClick={() => onNavigateToView(primaryAction.destination)}
-              className="mt-5 inline-flex items-center gap-2 rounded-xl bg-indigo-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 transition hover:bg-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
-            >
-              {primaryAction.label}
-              <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </button>
+            {recommendation && primaryAction ? (
+              <>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-indigo-300">
+                    <Sparkles className="h-4 w-4" aria-hidden="true" />
+                    Primary recommendation
+                  </div>
+                  <span className="rounded-full bg-indigo-500/10 px-2.5 py-1 text-xs font-semibold text-indigo-300">
+                    {Math.round(recommendation.confidence * 100)}% confidence
+                  </span>
+                </div>
+                <h2 id="nova-priority-title" className={`mt-4 font-display text-2xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                  {recommendation.title}
+                </h2>
+                <p className={`mt-3 text-sm leading-6 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{recommendation.description}</p>
+
+                <div className={`mt-5 rounded-2xl border p-4 ${isDark ? 'border-slate-800 bg-slate-950/35' : 'border-slate-200 bg-slate-50/80'}`}>
+                  <p className={`text-xs font-semibold uppercase tracking-[0.14em] ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>Why this matters</p>
+                  <p className={`mt-2 text-sm leading-6 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{recommendation.reasoning}</p>
+                </div>
+
+                <dl className="mt-5 grid gap-3 sm:grid-cols-3" aria-label="Recommendation details">
+                  <RecommendationDetail icon={Gauge} label="Priority" value={toLabel(recommendation.priority)} isDark={isDark} />
+                  <RecommendationDetail icon={Hourglass} label="Estimated effort" value="Not estimated" isDark={isDark} />
+                  <RecommendationDetail icon={TrendingUp} label="Career impact" value={`${toLabel(recommendation.priority)} impact`} isDark={isDark} />
+                </dl>
+
+                <button
+                  type="button"
+                  onClick={() => onNavigateToView(primaryAction.destination)}
+                  className="mt-6 inline-flex items-center gap-2 rounded-xl bg-indigo-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 transition hover:bg-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+                >
+                  {primaryAction.label}
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </button>
+              </>
+            ) : (
+              <RecommendationEmptyState isDark={isDark} />
+            )}
           </section>
 
           <section className={`rounded-3xl border p-6 ${isDark ? 'border-slate-800 bg-slate-900/50' : 'border-slate-200 bg-white/85'}`} aria-labelledby="nova-reasoning-title">
@@ -153,4 +175,41 @@ export default function NovaWorkspace({
       </div>
     </div>
   );
+}
+
+interface RecommendationDetailProps {
+  icon: typeof Gauge;
+  label: string;
+  value: string;
+  isDark: boolean;
+}
+
+function RecommendationDetail({ icon: Icon, label, value, isDark }: RecommendationDetailProps) {
+  return (
+    <div className={`rounded-2xl border p-3 ${isDark ? 'border-slate-800 bg-slate-950/25' : 'border-slate-200 bg-white'}`}>
+      <dt className={`flex items-center gap-1.5 text-xs ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
+        <Icon className="h-3.5 w-3.5 text-indigo-400" aria-hidden="true" />
+        {label}
+      </dt>
+      <dd className={`mt-2 text-sm font-semibold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{value}</dd>
+    </div>
+  );
+}
+
+function RecommendationEmptyState({ isDark }: { isDark: boolean }) {
+  return (
+    <div className="py-5 text-center" role="status" aria-live="polite">
+      <span className={`mx-auto flex h-11 w-11 items-center justify-center rounded-2xl ${isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>
+        <CircleAlert className="h-5 w-5" aria-hidden="true" />
+      </span>
+      <h2 id="nova-priority-title" className={`mt-4 font-display text-xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>Recommendations will appear here</h2>
+      <p className={`mx-auto mt-2 max-w-md text-sm leading-6 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+        Add goals, opportunities, or progress to CareerOS and Nova will turn that information into a focused next step.
+      </p>
+    </div>
+  );
+}
+
+function toLabel(value: string) {
+  return `${value.charAt(0).toUpperCase()}${value.slice(1)}`;
 }
