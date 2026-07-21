@@ -10,12 +10,14 @@ export class RepositoryResponseService {
 
     if (/^(hi|hello|hey|thanks|thank you|bye|good morning|good evening)[!. ]*$/i.test(value)) return this.smallTalk(value);
     if (/^(?:show|what(?:'s| is))\b.*\btoday'?s mission\b/i.test(value)) return this.mission(snapshot.missions);
-    if (/\bwhat goals? am i working on\b|\bshow (?:my )?goals?\b/i.test(value)) return this.goals(snapshot.goals);
+    if (/^(?:what|show|list)(?: are)?(?: my)? goals?\??$|\bwhat goals? am i working on\b|\bshow (?:my )?goals?\b/i.test(value)) return this.goals(snapshot.goals);
     if (/\b(?:what goals? do i have|how many goals?)\b/i.test(value)) return this.goals(snapshot.goals);
+    if (/^(?:what|show|list)(?: are)?(?: my)? opportunities?\??$|\bshow (?:my )?opportunities?\b/i.test(value)) return this.opportunities(snapshot.opportunities);
     if (/\b(?:summarize (?:everything|my career|career|my profile)|what do you know about me|what am i tracking|career summary)\b/i.test(value)) return this.summary(snapshot);
     if (/\bclosest deadline\b|\bdeadline is closest\b/i.test(value)) return this.closestDeadline(snapshot.opportunities);
     if (/\bhow many opportunities\b|\bopportunity count\b/i.test(value)) return `You currently have **${snapshot.opportunities.length} ${snapshot.opportunities.length === 1 ? 'opportunity' : 'opportunities'}** tracked.`;
-    if (/\bwhat certifications? do i have\b|\bshow (?:my )?certifications?\b/i.test(value)) return this.certifications(snapshot.certifications, snapshot.journey);
+    if (/^(?:what|show|list)(?: are)?(?: my)? certifications?\??$|\bwhat certifications? do i have\b|\bshow (?:my )?certifications?\b/i.test(value)) return this.certifications(snapshot.certifications, snapshot.journey);
+    if (/^(?:what|show|list)(?: are)?(?: my)? notes?\??$|\bshow (?:my )?notes?\b/i.test(value)) return this.notes(snapshot.notes);
     return null;
   }
 
@@ -23,7 +25,7 @@ export class RepositoryResponseService {
     const snapshot = dataService.repository.getSnapshot();
     const available = snapshot.opportunities.length + snapshot.goals.length + snapshot.missions.length + snapshot.certifications.length + snapshot.journey.length;
     if (!available) return "I'm having trouble generating additional insights right now, but your CareerOS data is still available.";
-    return `I'm having trouble generating additional insights right now, but your CareerOS data is still available. You currently have ${snapshot.opportunities.length} opportunities, ${snapshot.goals.length} goals, and ${snapshot.journey.length} journey milestones tracked.`;
+    return this.summary(snapshot);
   }
 
   private smallTalk(value: string): string {
@@ -60,6 +62,16 @@ export class RepositoryResponseService {
       .filter((opportunity) => opportunity.deadline && opportunity.deadline >= today)
       .sort((left, right) => left.deadline.localeCompare(right.deadline))[0];
     return closest ? `Your closest deadline is **${closest.title}** on **${closest.deadline}**.` : 'You have no upcoming opportunity deadlines recorded.';
+  }
+
+  private opportunities(opportunities: ReturnType<typeof dataService.repository.getSnapshot>['opportunities']): string {
+    if (!opportunities.length) return "You don't have any opportunities recorded right now.";
+    return `## Opportunities\n\n${opportunities.map((opportunity) => `- ${opportunity.title}${opportunity.organization ? ` — ${opportunity.organization}` : ''} (${opportunity.status})`).join('\n')}`;
+  }
+
+  private notes(notes: ReturnType<typeof dataService.repository.getSnapshot>['notes']): string {
+    if (!notes.length) return "You don't have any notes recorded right now.";
+    return `## Notes\n\n${notes.map((note) => `- ${note.title}`).join('\n')}`;
   }
 
   private certifications(certifications: ReturnType<typeof dataService.repository.getSnapshot>['certifications'], journey: ReturnType<typeof dataService.repository.getSnapshot>['journey']): string {

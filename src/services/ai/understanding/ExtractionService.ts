@@ -49,7 +49,7 @@ export class ExtractionService {
     let metadataStarted = false;
     for (const line of lines) {
       if (!line || /^today'?s mission\b|^today i need to\b|^tasks\s*:?$/i.test(line)) continue;
-      if (/^(?:duration|estimated time|priority|notes)\s*:?/i.test(line)) { metadataStarted = true; continue; }
+      if (/^(?:duration|estimated time|priority|notes)\s*:?/i.test(line) || /^\d+\s*(?:min(?:ute)?s?|hours?|h)$/i.test(line) || /^(?:high|medium|low)\s+priority$/i.test(line)) { metadataStarted = true; continue; }
       if (!metadataStarted) tasks.push(line.replace(/^[-*]\s*/, ''));
     }
     const field = (labels: string[]) => {
@@ -61,7 +61,10 @@ export class ExtractionService {
       }
       return undefined;
     };
-    return { ...base, title: 'Today’s Mission', tasks, duration: field(['duration', 'estimated time']), priority: field(['priority']), notes: field(['notes']) };
+    const bareDuration = lines.find((line) => /^\d+\s*(?:min(?:ute)?s?|hours?|h)$/i.test(line));
+    const barePriority = lines.find((line) => /^(?:high|medium|low)\s+priority$/i.test(line))?.match(/^(high|medium|low)/i)?.[1];
+    const priority = field(['priority']) ?? barePriority;
+    return { ...base, title: 'Today’s Mission', tasks, duration: field(['duration', 'estimated time']) ?? bareDuration, priority: priority ? `${priority.charAt(0).toUpperCase()}${priority.slice(1).toLowerCase()}` : undefined, notes: field(['notes']) };
   }
   private journey(message: string): ExtractedPayload {
     const title = message
