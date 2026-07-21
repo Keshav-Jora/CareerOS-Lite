@@ -20,6 +20,26 @@
 }
 
 @layer utilities {
+  :root {
+    color-scheme: dark light;
+    text-rendering: optimizeLegibility;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    min-width: 320px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background: rgba(129, 140, 248, 0.32);
+    color: inherit;
+  }
+
   /* Scrollbars */
   ::-webkit-scrollbar {
     width: 6px;
@@ -94,6 +114,27 @@
     outline-offset: 2px;
   }
 
+  :is(a, input, textarea, select, summary):focus-visible {
+    outline: 2px solid #818cf8;
+    outline-offset: 2px;
+  }
+
+  input, textarea, select {
+    accent-color: #818cf8;
+  }
+
+  .surface-elevated {
+    box-shadow: 0 18px 50px -28px rgba(15, 23, 42, 0.5);
+  }
+
+  .interactive-surface {
+    transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
+  }
+
+  .interactive-surface:hover {
+    transform: translateY(-1px);
+  }
+
   /* Glow effects */
   .glow-blue {
     box-shadow: 0 0 25px -5px rgba(99, 102, 241, 0.4);
@@ -139,6 +180,12 @@
       animation-iteration-count: 1 !important;
       scroll-behavior: auto !important;
       transition-duration: 1ms !important;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .glass-card-dark:hover, .glass-card-light:hover, .interactive-surface:hover {
+      transform: none;
     }
   }
 

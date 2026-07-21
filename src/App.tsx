@@ -306,7 +306,7 @@ export default function App() {
       />
 
       {/* Main Workspace Frame */}
-      <main className="flex-1 h-screen overflow-y-auto px-4 sm:px-6 md:px-10 py-4 md:py-8 pb-28 md:pb-8 relative z-10">
+      <main className="flex-1 h-screen overflow-y-auto px-4 py-4 pb-28 sm:px-6 md:px-10 md:py-8 md:pb-8 relative z-10">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentView}
@@ -314,7 +314,7 @@ export default function App() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="h-full"
+            className="h-full mx-auto w-full max-w-[1800px]"
           >
             {renderMainView()}
           </motion.div>
