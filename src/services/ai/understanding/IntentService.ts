@@ -17,7 +17,7 @@ const patterns: IntentPattern[] = [
   { intent: 'show', weight: 3, expression: /\b(show|list|display|view)\b/i },
   { intent: 'search', weight: 2, expression: /\b(search|find|look for)\b/i },
   { intent: 'prioritize', weight: 2, expression: /\b(prioritize|priority|focus on)\b/i },
-  { intent: 'update', weight: 2, expression: /\b(update|change|move|set|edit|modify)\b/i },
+  { intent: 'update', weight: 2, expression: /\b(update|change(?:d)?|move|set|edit|modify)\b/i },
   { intent: 'create', weight: 2, expression: /\b(add|create|new|register|track|save)\b/i },
 ];
 

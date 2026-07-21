@@ -32,7 +32,7 @@ export class ActionRouter {
     }
     const payload = plan.operation === 'create'
       ? this.payloadAdapter.normalize(entity, plan.payload)
-      : this.updatePayload(plan.payload);
+      : this.updatePayload(plan.payload, plan.sourceMessage);
     if (plan.operation === 'create') {
       const duplicate = this.findDuplicate(entity, payload);
       if (duplicate) {
@@ -209,8 +209,11 @@ export class ActionRouter {
       return existingTitle === title && existingOrganization === organization && existingCategory === category;
     });
   }
-  private updatePayload(payload: Record<string, unknown>): Record<string, unknown> {
-    return Object.fromEntries(Object.entries(payload).filter(([, value]) => value !== undefined && (!Array.isArray(value) || value.length > 0)));
+  private updatePayload(payload: Record<string, unknown>, sourceMessage: string): Record<string, unknown> {
+    return Object.fromEntries(Object.entries(payload).filter(([key, value]) => {
+      if (value === undefined || (Array.isArray(value) && value.length === 0)) return false;
+      return key !== 'title' || /(?:^|\n)\s*(?:title|role)\s*:/i.test(sourceMessage);
+    }));
   }
   private createdMessage(entity: CanonicalEntity, data: Record<string, unknown>): string {
     const title = this.recordTitle(data, entity);

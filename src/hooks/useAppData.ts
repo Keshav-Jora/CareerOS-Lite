@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { dataService } from '../services/dataService';
 import type { CanonicalCareerData, CareerMission } from '../types/career-data';
 import { calculateGamification, GamificationStats } from '../utils/gamification';
@@ -11,6 +11,7 @@ import {
   AppNotification,
   ActivityLog,
 } from '../types';
+import { logOpportunityDebug } from '../utils/opportunityDebug';
 
 export function useAppData() {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
@@ -21,7 +22,6 @@ export function useAppData() {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [activities, setActivities] = useState<ActivityLog[]>([]);
   const [canonicalData, setCanonicalData] = useState<CanonicalCareerData | null>(null);
-  const refreshQueued = useRef(false);
 
   // User Profile
   const [userName, setUserName] = useState('Student');
@@ -29,14 +29,12 @@ export function useAppData() {
   const [userGrad, setUserGrad] = useState('Not Set');
 
   const loadDatabase = useCallback(() => {
-    if (refreshQueued.current) return;
-    refreshQueued.current = true;
-    queueMicrotask(() => { refreshQueued.current = false; });
     dataService.initialize();
     const data = dataService.fetchAllData();
     const canonical = dataService.repository.getSnapshot();
 
     setOpportunities(data.opportunities);
+    logOpportunityDebug('useAppData', 'src/hooks/useAppData.ts', 'loadDatabase', 'dataService.fetchAllData()', data.opportunities);
     setTimelineEntries(data.timelineEntries);
     setProgressData(data.progressData);
     setCertificates(data.certificates);

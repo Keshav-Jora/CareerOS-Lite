@@ -13,7 +13,7 @@ export class ExtractionService {
     }
     const base = { skills: this.skills(message), links: this.links(message), tags: this.tags(message), checklist: this.checklist(message) };
     let result: ExtractedPayload;
-    if (entity === 'opportunity') result = this.opportunity(message, base);
+    if (entity === 'opportunity') result = this.opportunity(message, base, _intent);
     else if (entity === 'project') result = { ...base, title: this.title(message), description: this.value(message, /\bdescription\s*[:\-]?\s*([^\n]+)/i), technologies: this.skills(message), status: this.status(message), repository: this.links(message).find((link) => /github\.com/i.test(link)), demo: this.links(message).find((link) => !/github\.com/i.test(link)) };
     else if (entity === 'goal') result = { title: this.goalTitle(message), targetDate: this.dateAfter(message, /\b(?:by|target date|deadline)\s*(?:is|on|:)?\s*/i), priority: this.value(message, /\bpriority\s*[:\-]?\s*(high|medium|low)/i), notes: this.value(message, /\bnotes?\s*[:\-]?\s*([^\n]+)/i) };
     else if (entity === 'skill') result = { name: this.value(message, /\b(?:add|learn|skill)\s+([A-Za-z0-9.+#-]+)/i) ?? this.skills(message)[0], level: this.value(message, /\b(beginner|intermediate|advanced)\b/i) };
@@ -94,13 +94,22 @@ export class ExtractionService {
       isMajorMilestone: true,
     };
   }
-  private opportunity(message: string, base: ExtractedPayload): ExtractedPayload {
+  private opportunity(message: string, base: ExtractedPayload, intent: ActionIntent | null): ExtractedPayload {
     const fields = this.sections(message);
     const skills = this.sectionArray(fields.skills) ?? base.skills;
     const checklist = this.sectionArray(fields.checklist) ?? base.checklist;
     const tags = this.sectionArray(fields.tags, true) ?? base.tags;
     const portal = fields.portal ?? fields['application url'] ?? this.links(message)[0];
-    return { ...base, title: fields.title ?? fields.role ?? this.naturalOpportunityTitle(message) ?? this.title(message), organization: fields.company ?? fields.organization ?? fields.employer ?? this.naturalOrganization(message), category: this.normalizeCategory(fields.category) ?? this.category(message), source: fields.platform, priority: this.normalizePriority(fields.priority) ?? this.priority(message), status: fields.status, deadline: fields.deadline ? this.normalizeDate(fields.deadline) : this.dateAfter(message, /\bdeadline\s*(?:is|on|:)?\s*/i), skills, checklist, tags, eligibility: fields.eligibility, resumeVersion: fields.resume, applicationLink: portal, officialLink: portal, notes: fields['preparation notes'] ?? fields.notes };
+    const referenceTitle = intent === 'update' ? this.updateOpportunityTitle(message) : undefined;
+    return { ...base, title: fields.title ?? fields.role ?? referenceTitle ?? this.naturalOpportunityTitle(message) ?? this.title(message), organization: fields.company ?? fields.organization ?? fields.employer ?? this.naturalOrganization(message), category: this.normalizeCategory(fields.category) ?? this.category(message), source: fields.platform, priority: this.normalizePriority(fields.priority) ?? this.priority(message), status: fields.status, deadline: fields.deadline ? this.normalizeDate(fields.deadline) : this.updateDeadline(message) ?? this.dateAfter(message, /\bdeadline\s*(?:is|on|:)?\s*/i), skills, checklist, tags, eligibility: fields.eligibility, resumeVersion: fields.resume, applicationLink: portal, officialLink: portal, notes: fields['preparation notes'] ?? fields.notes };
+  }
+  private updateOpportunityTitle(message: string): string | undefined {
+    const match = message.match(/^(?:the\s+)?(.+?)\s+(?:deadline|priority|status)\s+(?:changed|change|moved|move|updated|update|is)\b/i)?.[1];
+    return match?.replace(/^(?:my|the)\s+/i, '').trim();
+  }
+  private updateDeadline(message: string): string | undefined {
+    const value = message.match(/\bdeadline\s+(?:changed|change|moved|move|updated|update)\s+(?:to\s+)?(today|tomorrow|next monday|\d{4}-\d{2}-\d{2}|\d{1,2}\s+[A-Za-z]+(?:\s*,?\s*\d{4})?|[A-Za-z]+\s+\d{1,2}(?:,?\s*\d{4})?)/i)?.[1];
+    return value ? this.normalizeDate(value) : undefined;
   }
   private naturalOpportunityTitle(message: string): string | undefined {
     const sentences = message.split(/\r?\n|(?<=[.!])\s+/).map((line) => line.trim()).filter(Boolean);
