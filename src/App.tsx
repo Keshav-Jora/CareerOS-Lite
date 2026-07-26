@@ -26,6 +26,7 @@ import ProgressView from './components/ProgressView';
 import CertificatesView from './components/CertificatesView';
 import NotesView from './components/NotesView';
 import SettingsView from './components/SettingsView';
+import FeedbackView from './components/FeedbackView';
 
 export default function App() {
   // Navigation View State
@@ -127,6 +128,7 @@ export default function App() {
     setAuthError(null);
     try {
       AnalyticsService.track({ event: 'user_logout', feature: 'authentication' });
+      AnalyticsService.endSession();
       await new AuthService().signOut();
       isClearingAccount.current = true;
       cloudSync.stop();
@@ -273,6 +275,8 @@ export default function App() {
             authError={authError}
           />
         );
+      case 'feedback':
+        return <FeedbackView theme={theme} user={sessionUser} />;
       default:
         return <div className="text-white text-center py-20">View not found.</div>;
     }

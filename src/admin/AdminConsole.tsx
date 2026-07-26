@@ -7,6 +7,8 @@ import { deriveAnalyticsMetrics, deriveRecentActivities, deriveUserSummaries, ty
 import { RecentActivityTable } from './RecentActivityTable';
 import { UserDirectory, type UserRange } from './UserDirectory';
 import { UserProfileDrawer } from './UserProfileDrawer';
+import { FeedbackSection } from './FeedbackSection';
+import type { FeedbackRecord, FeedbackStatus } from '../feedback/FeedbackTypes';
 
 const adminEmails = new Set((import.meta.env.VITE_ADMIN_EMAILS ?? '').split(',').map((email) => email.trim().toLowerCase()).filter(Boolean));
 const repository = new AnalyticsDashboardRepository();
@@ -21,6 +23,7 @@ export default function AdminConsole() {
   const [access, setAccess] = useState<'checking' | 'allowed' | 'denied'>('checking');
   const [records, setRecords] = useState<AnalyticsRecord[]>([]);
   const [users, setUsers] = useState<AdminUserRecord[]>([]);
+  const [feedback, setFeedback] = useState<FeedbackRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
@@ -34,7 +37,8 @@ export default function AdminConsole() {
 
   useEffect(() => new SessionManager().observe((user) => setAccess(user?.emailVerified && user.email && adminEmails.has(user.email.toLowerCase()) ? 'allowed' : 'denied')), []);
   useEffect(() => { if (access === 'denied') window.location.replace('/'); }, [access]);
-  const loadAnalytics = async () => { setLoading(true); setError(null); try { const snapshot = await repository.fetchSnapshot(); setRecords(snapshot.records); setUsers(snapshot.users); } catch (reason) { setError(reason instanceof Error ? reason.message : 'Unable to load analytics.'); } finally { setLoading(false); } };
+  const loadAnalytics = async () => { setLoading(true); setError(null); try { const snapshot = await repository.fetchSnapshot(); setRecords(snapshot.records); setUsers(snapshot.users); setFeedback(snapshot.feedback); } catch (reason) { setError(reason instanceof Error ? reason.message : 'Unable to load analytics.'); } finally { setLoading(false); } };
+  const updateFeedbackStatus = async (id: string, status: FeedbackStatus) => { try { await repository.updateFeedbackStatus(id, status); setFeedback((current) => current.map((item) => item.id === id ? { ...item, status, updatedAt: new Date() } : item)); } catch (reason) { setError(reason instanceof Error ? reason.message : 'Unable to update feedback status.'); } };
   useEffect(() => { if (access === 'allowed') void loadAnalytics(); }, [access]);
 
   if (access !== 'allowed') return <main className="flex min-h-screen items-center justify-center bg-slate-950 px-6 text-center text-sm text-slate-400"><ShieldCheck className="mr-2 h-5 w-5" />Verifying owner access…</main>;
@@ -46,6 +50,7 @@ export default function AdminConsole() {
     <section className="mt-8 rounded-2xl border border-slate-800 bg-slate-900/70 p-5 shadow-sm"><div className="flex items-center gap-2"><Users className="h-5 w-5 text-indigo-300" /><div><h2 className="text-base font-semibold text-slate-100">User growth</h2><p className="text-sm text-slate-400">New user profiles over the last seven days.</p></div></div>{hasGrowthData ? <div className="mt-5 h-52"><ResponsiveContainer><LineChart data={metrics.userGrowth}><XAxis dataKey="label" stroke="#64748b" tickLine={false} axisLine={false} /><YAxis stroke="#64748b" allowDecimals={false} tickLine={false} axisLine={false} /><Tooltip contentStyle={chartTooltipStyle} /><Line type="monotone" dataKey="value" stroke="#818cf8" strokeWidth={2} dot={{ r: 3 }} /></LineChart></ResponsiveContainer></div> : <div className="mt-5 flex h-28 items-center justify-center rounded-xl border border-dashed border-slate-800 text-sm text-slate-500">User growth will appear after the first indexed user joins.</div>}</section>
     <section className="mt-8"><RecentActivityTable activities={activities} users={summaries} /></section>
     <section className="mt-8"><UserDirectory users={visibleUsers} query={search} range={range} onQueryChange={setSearch} onRangeChange={setRange} onSelect={setSelectedUser} /></section>
+    <FeedbackSection feedback={feedback} users={summaries} onStatusChange={(id, status) => void updateFeedbackStatus(id, status)} />
     {!loading && !records.length && !users.length && <p className="mt-8 rounded-xl border border-slate-800 bg-slate-900/50 p-4 text-center text-sm text-slate-400">No analytics users or events have been recorded yet.</p>}
   </div><UserProfileDrawer user={selectedUser} activities={activities} onClose={() => setSelectedUser(null)} /></main>;
 }

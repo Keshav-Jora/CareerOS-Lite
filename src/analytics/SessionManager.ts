@@ -8,16 +8,20 @@ export class SessionManager {
 
   constructor(private readonly onEnd: () => void) {
     this.sessionId = this.readOrCreate();
-    if (typeof window !== 'undefined') window.addEventListener('pagehide', this.end, { once: true });
+    if (typeof window !== 'undefined') {
+      window.addEventListener('pagehide', this.end, { once: true });
+      window.addEventListener('beforeunload', this.end, { once: true });
+    }
   }
 
   get id(): string { return this.sessionId; }
   get startedAtMs(): number { return this.startedAt; }
   get durationMs(): number { return Math.max(0, Date.now() - this.startedAt); }
 
-  private end = (): void => {
+  end = (): void => {
     if (this.ended) return;
     this.ended = true;
+    try { sessionStorage.removeItem(SESSION_STORAGE_KEY); } catch { /* session storage is optional */ }
     this.onEnd();
   };
 

@@ -35,6 +35,19 @@ export class AnalyticsService {
     }
   }
 
+  /** Closes the active analytics session before Firebase Auth signs the user out. */
+  static endSession(): void {
+    try {
+      const user = getFirebaseAuth()?.currentUser;
+      if (user) this.users.touch(user, 'offline');
+      this.stopHeartbeat();
+      this.session?.end();
+      this.session = null;
+    } catch (error) {
+      if (AnalyticsConfig.isDevelopment) console.debug('[Analytics] Session shutdown skipped.', error);
+    }
+  }
+
   private static ensureSession(): void {
     if (this.session) return;
     this.session = new SessionManager(() => {

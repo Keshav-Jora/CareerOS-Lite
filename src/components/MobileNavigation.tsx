@@ -22,6 +22,7 @@ import {
   Menu,
   X,
   ChevronRight,
+  MessageSquarePlus,
 } from 'lucide-react';
 import { AppNotification } from '../types';
 
@@ -90,6 +91,7 @@ export default function MobileNavigation({
     { id: 'progress', label: 'Velocity Progress', icon: TrendingUp },
     { id: 'certificates', label: 'Certificates', icon: Award },
     { id: 'notes', label: 'Knowledge Hub', icon: FileText },
+    { id: 'feedback', label: 'Feedback', icon: MessageSquarePlus },
   ];
 
   // ONLY 5 bottom navigation items as explicitly requested: Home, Opportunities, Journey, Nova, Profile

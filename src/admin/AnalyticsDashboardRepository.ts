@@ -1,6 +1,7 @@
-import { collection, getDocs, limit, orderBy, query, Timestamp, where } from 'firebase/firestore';
+import { collection, doc, getDocs, limit, orderBy, query, serverTimestamp, Timestamp, updateDoc, where } from 'firebase/firestore';
 import { getFirebaseFirestore } from '../services/auth/FirebaseConfig';
 import type { AnalyticsEvent, AnalyticsEventName, AnalyticsUserProfile } from '../analytics/EventTypes';
+import type { FeedbackRecord, FeedbackStatus } from '../feedback/FeedbackTypes';
 
 export interface AnalyticsRecord extends AnalyticsEvent {
   event: AnalyticsEventName;
@@ -18,6 +19,7 @@ export interface AdminUserRecord extends AnalyticsUserProfile {
 export interface AdminAnalyticsSnapshot {
   records: AnalyticsRecord[];
   users: AdminUserRecord[];
+  feedback: FeedbackRecord[];
 }
 
 /** Read-only boundary for the existing analytics_events collection. */
@@ -25,7 +27,7 @@ export class AnalyticsDashboardRepository {
   async fetchSnapshot(days = 30): Promise<AdminAnalyticsSnapshot> {
     const firestore = getFirebaseFirestore();
     if (!firestore) throw new Error('Firebase analytics is not configured.');
-    const records = await this.fetchRecent(days);
+    const [records, feedback] = await Promise.all([this.fetchRecent(days), this.fetchFeedback()]);
     let users;
     try {
       users = await getDocs(collection(firestore, 'analytics_users'));
@@ -33,7 +35,7 @@ export class AnalyticsDashboardRepository {
       this.logQueryFailure('analytics_users', error);
       throw error;
     }
-    return { records, users: users.docs.map((document) => this.userFromDocument(document.data())) };
+    return { records, users: users.docs.map((document) => this.userFromDocument(document.data())), feedback };
   }
 
   async fetchRecent(days = 30): Promise<AnalyticsRecord[]> {
@@ -63,6 +65,27 @@ export class AnalyticsDashboardRepository {
     });
   }
 
+  async fetchFeedback(): Promise<FeedbackRecord[]> {
+    const firestore = getFirebaseFirestore();
+    if (!firestore) throw new Error('Firebase analytics is not configured.');
+    try {
+      const result = await getDocs(query(collection(firestore, 'feedback'), orderBy('createdAt', 'desc'), limit(250)));
+      return result.docs.map((document) => {
+        const data = document.data() as Omit<FeedbackRecord, 'id' | 'createdAt' | 'updatedAt'> & { createdAt?: Timestamp; updatedAt?: Timestamp };
+        return { ...data, id: document.id, createdAt: data.createdAt?.toDate?.() ?? new Date(0), updatedAt: data.updatedAt?.toDate?.() ?? null };
+      });
+    } catch (error) {
+      this.logQueryFailure('feedback', error);
+      throw error;
+    }
+  }
+
+  async updateFeedbackStatus(id: string, status: FeedbackStatus): Promise<void> {
+    const firestore = getFirebaseFirestore();
+    if (!firestore) throw new Error('Firebase analytics is not configured.');
+    await updateDoc(doc(firestore, 'feedback', id), { status, updatedAt: serverTimestamp() });
+  }
+
   private userFromDocument(data: Record<string, unknown>): AdminUserRecord {
     const date = (value: unknown): Date | null => value && typeof value === 'object' && 'toDate' in value && typeof (value as { toDate?: unknown }).toDate === 'function'
       ? (value as Timestamp).toDate()
@@ -80,7 +103,7 @@ export class AnalyticsDashboardRepository {
     };
   }
 
-  private logQueryFailure(collectionName: 'analytics_events' | 'analytics_users', error: unknown): void {
+  private logQueryFailure(collectionName: 'analytics_events' | 'analytics_users' | 'feedback', error: unknown): void {
     if (!import.meta.env.DEV) return;
     const firebaseError = error as { code?: unknown; message?: unknown };
     console.error(`[Owner Console] Firestore read failed: ${collectionName}`, { code: firebaseError.code, message: firebaseError.message, error });

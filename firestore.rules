@@ -36,6 +36,23 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /feedback/{feedbackId} {
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid
+        && validFeedback();
+      allow read: if isAdmin();
+      allow update: if (signedIn()
+          && resource.data.userId == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['screenshotUrl', 'updatedAt'])
+          && request.resource.data.screenshotUrl is string
+          && request.resource.data.updatedAt is timestamp)
+        || (isAdmin()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
+          && request.resource.data.status in ['open', 'in_progress', 'closed']
+          && request.resource.data.updatedAt is timestamp);
+      allow delete: if false;
+    }
+
     function validAnalyticsEvent() {
       let data = request.resource.data;
       return data.keys().hasOnly([
@@ -56,6 +73,18 @@ service cloud.firestore {
         && (!data.keys().hasAny(['model']) || data.model is string)
         && (!data.keys().hasAny(['responseTime']) || (data.responseTime is number && data.responseTime >= 0))
         && (!data.keys().hasAny(['metadata']) || data.metadata is map);
+    }
+
+    function validFeedback() {
+      let data = request.resource.data;
+      return data.keys().hasOnly(['userId', 'rating', 'kind', 'message', 'status', 'createdAt', 'updatedAt'])
+        && data.keys().hasAll(['userId', 'rating', 'kind', 'message', 'status', 'createdAt', 'updatedAt'])
+        && data.userId is string
+        && data.rating is number && data.rating >= 1 && data.rating <= 5
+        && data.kind in ['general', 'bug', 'feature']
+        && data.message is string && data.message.size() > 0 && data.message.size() <= 4000
+        && data.status == 'open'
+        && data.createdAt is timestamp && data.updatedAt is timestamp;
     }
 
     function validAnalyticsUser(userId) {

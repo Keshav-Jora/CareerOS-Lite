@@ -1,0 +1,26 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn() && (
+        request.auth.token.admin == true ||
+        (request.auth.token.email_verified == true
+          && request.auth.token.email in ['kesujora01@gmail.com'])
+      );
+    }
+
+    match /feedback_screenshots/{userId}/{fileName} {
+      allow create: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.size <= 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+      allow read: if signedIn() && (request.auth.uid == userId || isAdmin());
+      allow update, delete: if false;
+    }
+  }
+}
