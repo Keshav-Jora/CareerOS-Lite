@@ -1,4 +1,4 @@
-import type { AnalyticsRecord } from './AnalyticsDashboardRepository';
+import type { AdminUserRecord, AnalyticsRecord } from './AnalyticsDashboardRepository';
 
 interface MetricPoint { label: string; value: number; }
 
@@ -14,14 +14,51 @@ export interface AdminAnalyticsMetrics {
   providerSuccessRate: number | null;
   providerFailures: number;
   fallbackCount: number;
+  ownerOverview: { newUsersToday: number; currentOnlineUsers: number; };
+  userGrowth: MetricPoint[];
 }
 
 const DAY = 86_400_000;
 const daysAgo = (days: number, now: number) => now - days * DAY;
 const countBy = (labels: readonly string[], get: (label: string) => number): MetricPoint[] => labels.map((label) => ({ label, value: get(label) }));
 
-export function deriveAnalyticsMetrics(records: AnalyticsRecord[], now = Date.now()): AdminAnalyticsMetrics {
-  const users = new Set(records.map(({ userId }) => userId).filter((id) => id && id !== 'anonymous'));
+export interface AdminUserSummary extends AdminUserRecord {
+  totalSessions: number;
+  averageSessionMs: number;
+  conversations: number;
+  goalsCreated: number;
+  certificates: number;
+  journeyEntries: number;
+  notes: number;
+}
+
+export interface AdminActivity { id: string; userId: string; action: string; page: string; timestamp: Date; }
+
+export function deriveUserSummaries(records: AnalyticsRecord[], users: AdminUserRecord[]): AdminUserSummary[] {
+  const starts = records.filter((item) => item.event === 'session_start');
+  const ends = new Map(records.filter((item) => item.event === 'session_end').map((item) => [item.sessionId, item.timestamp.getTime()]));
+  const durations = new Map<string, number[]>();
+  starts.forEach((item) => { const end = ends.get(item.sessionId); if (end && end >= item.timestamp.getTime()) { const values = durations.get(item.userId) ?? []; values.push(end - item.timestamp.getTime()); durations.set(item.userId, values); } });
+  const indexedUsers = new Map(users.map((user) => [user.uid, user]));
+  records.forEach((record) => {
+    if (!record.userId || record.userId === 'anonymous' || indexedUsers.has(record.userId)) return;
+    indexedUsers.set(record.userId, { uid: record.userId, displayName: null, email: null, photoURL: null, providerId: 'unknown', joinedAt: null, lastLoginAt: null, lastSeenAt: record.timestamp, status: 'offline' });
+  });
+  return Array.from(indexedUsers.values()).map((user) => {
+    const userEvents = records.filter((item) => item.userId === user.uid);
+    const userDurations = durations.get(user.uid) ?? [];
+    const count = (event: string) => userEvents.filter((item) => item.event === event).length;
+    return { ...user, totalSessions: starts.filter((item) => item.userId === user.uid).length, averageSessionMs: userDurations.length ? Math.round(userDurations.reduce((sum, value) => sum + value, 0) / userDurations.length) : 0, conversations: count('chat_completed'), goalsCreated: count('goal_created'), certificates: count('certificate_added'), journeyEntries: count('journey_added'), notes: count('note_created') };
+  }).sort((left, right) => (right.lastSeenAt?.getTime() ?? 0) - (left.lastSeenAt?.getTime() ?? 0));
+}
+
+export function deriveRecentActivities(records: AnalyticsRecord[]): AdminActivity[] {
+  const labels: Partial<Record<string, string>> = { user_login: 'Logged in', user_logout: 'Logged out', dashboard_opened: 'Opened Dashboard', nova_opened: 'Opened Nova', chat_started: 'Started Nova chat', goal_created: 'Created goal', goal_updated: 'Updated goal', goal_deleted: 'Deleted goal', journey_added: 'Added journey entry', certificate_added: 'Added certificate', note_created: 'Created note', settings_opened: 'Opened Settings' };
+  return records.filter((item) => labels[item.event]).slice(0, 10).map((item, index) => ({ id: `${item.sessionId}-${item.timestamp.getTime()}-${index}`, userId: item.userId, action: labels[item.event]!, page: item.feature ?? 'application', timestamp: item.timestamp }));
+}
+
+export function deriveAnalyticsMetrics(records: AnalyticsRecord[], users: AdminUserRecord[] = [], now = Date.now()): AdminAnalyticsMetrics {
+  const userIds = new Set([...users.map(({ uid }) => uid), ...records.map(({ userId }) => userId)].filter((id) => id && id !== 'anonymous'));
   const activeUsers = (since: number) => new Set(records.filter((item) => item.timestamp.getTime() >= since).map((item) => item.userId).filter((id) => id && id !== 'anonymous')).size;
   const events = (event: string) => records.filter((item) => item.event === event);
   const providerEvents = events('provider_used');
@@ -63,7 +100,7 @@ export function deriveAnalyticsMetrics(records: AnalyticsRecord[], now = Date.no
   const attempts = providerEvents.length + providerFailures;
 
   return {
-    overview: { totalUsers: users.size, dau: activeUsers(daysAgo(1, now)), wau: activeUsers(daysAgo(7, now)), mau: activeUsers(daysAgo(30, now)), averageSessionMs: sessionLengths.length ? Math.round(sessionLengths.reduce((sum, value) => sum + value, 0) / sessionLengths.length) : 0, conversations: conversations.length, feedbackScore: feedbackPositive + feedbackNegative ? Math.round((feedbackPositive / (feedbackPositive + feedbackNegative)) * 100) : null },
+    overview: { totalUsers: userIds.size, dau: activeUsers(daysAgo(1, now)), wau: activeUsers(daysAgo(7, now)), mau: activeUsers(daysAgo(30, now)), averageSessionMs: sessionLengths.length ? Math.round(sessionLengths.reduce((sum, value) => sum + value, 0) / sessionLengths.length) : 0, conversations: conversations.length, feedbackScore: feedbackPositive + feedbackNegative ? Math.round((feedbackPositive / (feedbackPositive + feedbackNegative)) * 100) : null },
     providerUsage,
     responseTimes,
     intentDistribution: countBy(Array.from(new Set(intents)), (intent) => intents.filter((value) => value === intent).length),
@@ -74,5 +111,7 @@ export function deriveAnalyticsMetrics(records: AnalyticsRecord[], now = Date.no
     providerSuccessRate: attempts ? Math.round((providerEvents.length / attempts) * 100) : null,
     providerFailures,
     fallbackCount: events('fallback_used').length,
+    ownerOverview: { newUsersToday: users.filter((user) => user.joinedAt && user.joinedAt.getTime() >= daysAgo(1, now)).length, currentOnlineUsers: users.filter((user) => user.status === 'online').length },
+    userGrowth: Array.from({ length: 7 }, (_, index) => { const start = new Date(now - (6 - index) * DAY); start.setHours(0, 0, 0, 0); const end = start.getTime() + DAY; return { label: start.toLocaleDateString(undefined, { weekday: 'short' }), value: users.filter((user) => user.joinedAt && user.joinedAt.getTime() >= start.getTime() && user.joinedAt.getTime() < end).length }; }),
   };
 }
