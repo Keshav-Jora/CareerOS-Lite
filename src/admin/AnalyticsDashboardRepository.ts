@@ -25,7 +25,14 @@ export class AnalyticsDashboardRepository {
   async fetchSnapshot(days = 30): Promise<AdminAnalyticsSnapshot> {
     const firestore = getFirebaseFirestore();
     if (!firestore) throw new Error('Firebase analytics is not configured.');
-    const [records, users] = await Promise.all([this.fetchRecent(days), getDocs(collection(firestore, 'analytics_users'))]);
+    const records = await this.fetchRecent(days);
+    let users;
+    try {
+      users = await getDocs(collection(firestore, 'analytics_users'));
+    } catch (error) {
+      this.logQueryFailure('analytics_users', error);
+      throw error;
+    }
     return { records, users: users.docs.map((document) => this.userFromDocument(document.data())) };
   }
 
@@ -34,12 +41,18 @@ export class AnalyticsDashboardRepository {
     if (!firestore) throw new Error('Firebase analytics is not configured.');
 
     const since = Timestamp.fromMillis(Date.now() - days * 24 * 60 * 60 * 1000);
-    const result = await getDocs(query(
-      collection(firestore, 'analytics_events'),
-      where('timestamp', '>=', since),
-      orderBy('timestamp', 'desc'),
-      limit(10_000),
-    ));
+    let result;
+    try {
+      result = await getDocs(query(
+        collection(firestore, 'analytics_events'),
+        where('timestamp', '>=', since),
+        orderBy('timestamp', 'desc'),
+        limit(10_000),
+      ));
+    } catch (error) {
+      this.logQueryFailure('analytics_events', error);
+      throw error;
+    }
 
     return result.docs.map((document) => {
       const data = document.data() as Omit<AnalyticsRecord, 'timestamp'> & { timestamp?: Timestamp };
@@ -65,5 +78,11 @@ export class AnalyticsDashboardRepository {
       lastLoginAt: date(data.lastLoginAt),
       lastSeenAt: date(data.lastSeenAt),
     };
+  }
+
+  private logQueryFailure(collectionName: 'analytics_events' | 'analytics_users', error: unknown): void {
+    if (!import.meta.env.DEV) return;
+    const firebaseError = error as { code?: unknown; message?: unknown };
+    console.error(`[Owner Console] Firestore read failed: ${collectionName}`, { code: firebaseError.code, message: firebaseError.message, error });
   }
 }

@@ -6,9 +6,14 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Set this custom claim with the Firebase Admin SDK; never rely on a client-side email list.
+    // Custom claims are preferred for managed admins. The verified owner email keeps
+    // the single-owner console usable before an Admin SDK claim is provisioned.
     function isAdmin() {
-      return signedIn() && request.auth.token.admin == true;
+      return signedIn() && (
+        request.auth.token.admin == true ||
+        (request.auth.token.email_verified == true
+          && request.auth.token.email in ['kesujora01@gmail.com'])
+      );
     }
 
     match /careerData/{userId} {

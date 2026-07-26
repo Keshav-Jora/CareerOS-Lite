@@ -15,6 +15,7 @@ export class AnalyticsService {
   private static session: SessionManager | null = null;
   private static pendingEvents: AnalyticsEvent[] = [];
   private static authUnsubscribe: Unsubscribe | null = null;
+  private static heartbeatId: number | null = null;
 
   static track(event: AnalyticsEvent): void {
     try {
@@ -36,7 +37,11 @@ export class AnalyticsService {
 
   private static ensureSession(): void {
     if (this.session) return;
-    this.session = new SessionManager(() => this.track({ event: 'session_end', metadata: { ...this.environmentMetadata(), sessionDurationMs: this.session?.durationMs ?? 0 } }));
+    this.session = new SessionManager(() => {
+      this.stopHeartbeat();
+      this.track({ event: 'session_end', metadata: { ...this.environmentMetadata(), sessionDurationMs: this.session?.durationMs ?? 0 } });
+    });
+    this.startHeartbeat();
     this.track({ event: 'session_start', metadata: this.environmentMetadata() });
   }
 
@@ -101,6 +106,19 @@ export class AnalyticsService {
       language: navigator.language,
       screenSize: `${window.screen.width}x${window.screen.height}`,
     };
+  }
+
+  private static startHeartbeat(): void {
+    if (this.heartbeatId !== null || typeof window === 'undefined') return;
+    const heartbeat = () => { const user = getFirebaseAuth()?.currentUser; if (user) this.users.touch(user, 'online'); };
+    heartbeat();
+    this.heartbeatId = window.setInterval(heartbeat, 60_000);
+  }
+
+  private static stopHeartbeat(): void {
+    if (this.heartbeatId === null || typeof window === 'undefined') return;
+    window.clearInterval(this.heartbeatId);
+    this.heartbeatId = null;
   }
 }
 

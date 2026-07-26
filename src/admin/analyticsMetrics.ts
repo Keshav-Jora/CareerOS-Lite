@@ -1,4 +1,6 @@
 import type { AdminUserRecord, AnalyticsRecord } from './AnalyticsDashboardRepository';
+import { presence } from './adminFormatters';
+import type { AnalyticsUserStatus } from '../analytics/EventTypes';
 
 interface MetricPoint { label: string; value: number; }
 
@@ -22,7 +24,8 @@ const DAY = 86_400_000;
 const daysAgo = (days: number, now: number) => now - days * DAY;
 const countBy = (labels: readonly string[], get: (label: string) => number): MetricPoint[] => labels.map((label) => ({ label, value: get(label) }));
 
-export interface AdminUserSummary extends AdminUserRecord {
+export interface AdminUserSummary extends Omit<AdminUserRecord, 'status'> {
+  status: AnalyticsUserStatus | 'idle';
   totalSessions: number;
   averageSessionMs: number;
   conversations: number;
@@ -30,6 +33,7 @@ export interface AdminUserSummary extends AdminUserRecord {
   certificates: number;
   journeyEntries: number;
   notes: number;
+  lastActiveAt: Date | null;
 }
 
 export interface AdminActivity { id: string; userId: string; action: string; page: string; timestamp: Date; }
@@ -48,7 +52,9 @@ export function deriveUserSummaries(records: AnalyticsRecord[], users: AdminUser
     const userEvents = records.filter((item) => item.userId === user.uid);
     const userDurations = durations.get(user.uid) ?? [];
     const count = (event: string) => userEvents.filter((item) => item.event === event).length;
-    return { ...user, totalSessions: starts.filter((item) => item.userId === user.uid).length, averageSessionMs: userDurations.length ? Math.round(userDurations.reduce((sum, value) => sum + value, 0) / userDurations.length) : 0, conversations: count('chat_completed'), goalsCreated: count('goal_created'), certificates: count('certificate_added'), journeyEntries: count('journey_added'), notes: count('note_created') };
+    const lastActiveAt = userEvents.reduce<Date | null>((latest, event) => !latest || event.timestamp > latest ? event.timestamp : latest, user.lastSeenAt);
+    const currentStatus = presence(user.lastSeenAt);
+    return { ...user, status: currentStatus, lastActiveAt, totalSessions: starts.filter((item) => item.userId === user.uid).length, averageSessionMs: userDurations.length ? Math.round(userDurations.reduce((sum, value) => sum + value, 0) / userDurations.length) : 0, conversations: count('chat_completed'), goalsCreated: count('goal_created'), certificates: count('certificate_added'), journeyEntries: count('journey_added'), notes: count('note_created') };
   }).sort((left, right) => (right.lastSeenAt?.getTime() ?? 0) - (left.lastSeenAt?.getTime() ?? 0));
 }
 
@@ -111,7 +117,7 @@ export function deriveAnalyticsMetrics(records: AnalyticsRecord[], users: AdminU
     providerSuccessRate: attempts ? Math.round((providerEvents.length / attempts) * 100) : null,
     providerFailures,
     fallbackCount: events('fallback_used').length,
-    ownerOverview: { newUsersToday: users.filter((user) => user.joinedAt && user.joinedAt.getTime() >= daysAgo(1, now)).length, currentOnlineUsers: users.filter((user) => user.status === 'online').length },
+    ownerOverview: { newUsersToday: users.filter((user) => user.joinedAt && user.joinedAt.getTime() >= daysAgo(1, now)).length, currentOnlineUsers: users.filter((user) => presence(user.lastSeenAt, now) === 'online').length },
     userGrowth: Array.from({ length: 7 }, (_, index) => { const start = new Date(now - (6 - index) * DAY); start.setHours(0, 0, 0, 0); const end = start.getTime() + DAY; return { label: start.toLocaleDateString(undefined, { weekday: 'short' }), value: users.filter((user) => user.joinedAt && user.joinedAt.getTime() >= start.getTime() && user.joinedAt.getTime() < end).length }; }),
   };
 }
