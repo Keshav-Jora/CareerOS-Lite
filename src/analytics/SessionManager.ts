@@ -4,6 +4,7 @@ const SESSION_STORAGE_KEY = 'career_os_analytics_session_id';
 export class SessionManager {
   private ended = false;
   private readonly sessionId: string;
+  private readonly startedAt = Date.now();
 
   constructor(private readonly onEnd: () => void) {
     this.sessionId = this.readOrCreate();
@@ -11,6 +12,8 @@ export class SessionManager {
   }
 
   get id(): string { return this.sessionId; }
+  get startedAtMs(): number { return this.startedAt; }
+  get durationMs(): number { return Math.max(0, Date.now() - this.startedAt); }
 
   private end = (): void => {
     if (this.ended) return;

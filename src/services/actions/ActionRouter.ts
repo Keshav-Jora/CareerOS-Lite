@@ -6,6 +6,7 @@ import type { ActionPlan, ActionOperation } from '../ai/understanding/ActionPlan
 import type { CanonicalEntity } from '../data/CanonicalCareerRepository';
 import { EntityPayloadAdapter } from '../data/EntityPayloadAdapter';
 import { logOpportunityDebug } from '../../utils/opportunityDebug';
+import { AnalyticsService } from '../../analytics/AnalyticsService';
 
 export interface ActionPlanExecutionResult {
   success: boolean;
@@ -290,9 +291,23 @@ export class ActionRouter {
     }
     return { success: false, entity, operation, message: `I could not find that ${entity}. Please include its title${entity === 'opportunity' ? ' and company if there are duplicates' : ''}.`, reason: 'target-not-found' };
   }
-  private planSuccess(entity: CanonicalEntity, operation: ActionOperation, message: string, data?: unknown): ActionPlanExecutionResult { window.dispatchEvent(new Event('career-os-data-changed')); return { success: true, entity, operation, message, data }; }
+  private planSuccess(entity: CanonicalEntity, operation: ActionOperation, message: string, data?: unknown): ActionPlanExecutionResult {
+    const event = activityEvent(entity, operation);
+    if (event) AnalyticsService.track({ event, feature: entity });
+    window.dispatchEvent(new Event('career-os-data-changed'));
+    return { success: true, entity, operation, message, data };
+  }
 }
 
 function success(message: string): NovaActionResult { window.dispatchEvent(new Event('career-os-data-changed')); return { status: 'executed', message }; }
 function failure(message: string, intent?: NovaActionIntent): NovaActionResult { return { status: 'failed', message, intent }; }
 function describe(intent: NovaActionIntent): string { return `${intent.type.replaceAll('_', ' ')} ${intent.entity}`; }
+function activityEvent(entity: CanonicalEntity, operation: ActionOperation): 'goal_created' | 'goal_updated' | 'goal_deleted' | 'journey_added' | 'certificate_added' | 'note_created' | undefined {
+  if (entity === 'goal' && operation === 'create') return 'goal_created';
+  if (entity === 'goal' && operation === 'update') return 'goal_updated';
+  if (entity === 'goal' && operation === 'delete') return 'goal_deleted';
+  if (entity === 'journey' && operation === 'create') return 'journey_added';
+  if (entity === 'certification' && operation === 'create') return 'certificate_added';
+  if (entity === 'note' && operation === 'create') return 'note_created';
+  return undefined;
+}

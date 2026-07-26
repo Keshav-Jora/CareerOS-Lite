@@ -83,7 +83,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const eventByView: Record<string, 'dashboard_opened' | 'settings_opened'> = { dashboard: 'dashboard_opened', settings: 'settings_opened' };
+    const eventByView: Record<string, 'dashboard_opened' | 'settings_opened' | 'nova_opened'> = { dashboard: 'dashboard_opened', nova: 'nova_opened', settings: 'settings_opened' };
     const event = eventByView[currentView];
     if (event) AnalyticsService.track({ event, feature: currentView });
   }, [currentView]);

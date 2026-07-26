@@ -23,6 +23,14 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    match /analytics_users/{userId} {
+      allow create, update: if signedIn()
+        && request.auth.uid == userId
+        && validAnalyticsUser(userId);
+      allow read: if isAdmin();
+      allow delete: if false;
+    }
+
     function validAnalyticsEvent() {
       let data = request.resource.data;
       return data.keys().hasOnly([
@@ -43,6 +51,21 @@ service cloud.firestore {
         && (!data.keys().hasAny(['model']) || data.model is string)
         && (!data.keys().hasAny(['responseTime']) || (data.responseTime is number && data.responseTime >= 0))
         && (!data.keys().hasAny(['metadata']) || data.metadata is map);
+    }
+
+    function validAnalyticsUser(userId) {
+      let data = request.resource.data;
+      return data.keys().hasOnly(['uid', 'displayName', 'email', 'photoURL', 'providerId', 'joinedAt', 'lastLoginAt', 'lastSeenAt', 'status'])
+        && data.keys().hasAll(['uid', 'status', 'lastSeenAt'])
+        && data.uid == userId
+        && data.status in ['online', 'offline']
+        && data.lastSeenAt is timestamp
+        && (!data.keys().hasAny(['displayName']) || data.displayName is string || data.displayName == null)
+        && (!data.keys().hasAny(['email']) || data.email is string || data.email == null)
+        && (!data.keys().hasAny(['photoURL']) || data.photoURL is string || data.photoURL == null)
+        && (!data.keys().hasAny(['providerId']) || data.providerId is string)
+        && (!data.keys().hasAny(['joinedAt']) || data.joinedAt is timestamp || data.joinedAt == null)
+        && (!data.keys().hasAny(['lastLoginAt']) || data.lastLoginAt is timestamp);
     }
   }
 }

@@ -4,12 +4,14 @@ import { AnalyticsConfig } from './AnalyticsConfig';
 import { AnalyticsRepository } from './AnalyticsRepository';
 import type { AnalyticsEvent, AnalyticsEventDocument } from './EventTypes';
 import { SessionManager } from './SessionManager';
+import { AnalyticsUserRepository } from './AnalyticsUserRepository';
 
 const restrictedMetadataKey = /(?:conversation|prompt|resume|api.?key|token|email|content|message|text)/i;
 
 /** The only application-facing analytics API. It never blocks or throws. */
 export class AnalyticsService {
   private static repository = new AnalyticsRepository();
+  private static users = new AnalyticsUserRepository();
   private static session: SessionManager | null = null;
   private static pendingEvents: AnalyticsEvent[] = [];
   private static authUnsubscribe: Unsubscribe | null = null;
@@ -34,8 +36,8 @@ export class AnalyticsService {
 
   private static ensureSession(): void {
     if (this.session) return;
-    this.session = new SessionManager(() => this.track({ event: 'session_end' }));
-    this.track({ event: 'session_start' });
+    this.session = new SessionManager(() => this.track({ event: 'session_end', metadata: { ...this.environmentMetadata(), sessionDurationMs: this.session?.durationMs ?? 0 } }));
+    this.track({ event: 'session_start', metadata: this.environmentMetadata() });
   }
 
   private static queueUntilAuthenticated(event: AnalyticsEvent): void {
@@ -72,6 +74,10 @@ export class AnalyticsService {
       sessionId: this.session?.id ?? 'unavailable',
       metadata: this.safeMetadata(event.metadata),
     };
+    const user = getFirebaseAuth()?.currentUser;
+    if (user && ['user_login', 'session_start', 'session_end', 'user_logout'].includes(event.event)) {
+      this.users.touch(user, event.event === 'session_end' || event.event === 'user_logout' ? 'offline' : 'online', event.event === 'user_login');
+    }
     this.log('dispatching write', { event: document.event, sessionId: document.sessionId, userId: document.userId });
     this.repository.write(document);
   }
@@ -83,6 +89,18 @@ export class AnalyticsService {
   private static safeMetadata(metadata: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
     if (!metadata) return undefined;
     return Object.fromEntries(Object.entries(metadata).filter(([key, value]) => !restrictedMetadataKey.test(key) && isSafeValue(value)));
+  }
+
+  private static environmentMetadata(): Record<string, unknown> {
+    if (typeof navigator === 'undefined' || typeof window === 'undefined') return {};
+    const userAgent = navigator.userAgent;
+    return {
+      browser: /Edg\//.test(userAgent) ? 'Edge' : /Chrome\//.test(userAgent) ? 'Chrome' : /Firefox\//.test(userAgent) ? 'Firefox' : /Safari\//.test(userAgent) ? 'Safari' : 'Other',
+      operatingSystem: /Windows/.test(userAgent) ? 'Windows' : /Android/.test(userAgent) ? 'Android' : /iPhone|iPad|iPod/.test(userAgent) ? 'iOS' : /Mac OS/.test(userAgent) ? 'macOS' : /Linux/.test(userAgent) ? 'Linux' : 'Other',
+      deviceType: /Mobi|Android|iPhone/i.test(userAgent) ? 'mobile' : /iPad|Tablet/i.test(userAgent) ? 'tablet' : 'desktop',
+      language: navigator.language,
+      screenSize: `${window.screen.width}x${window.screen.height}`,
+    };
   }
 }
 
