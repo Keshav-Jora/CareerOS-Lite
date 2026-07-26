@@ -22,8 +22,8 @@ export default function EmptyState({
   const isDark = theme === 'dark';
 
   return (
-    <div className={`rounded-2xl border border-dashed px-6 py-10 text-center ${isDark ? 'border-slate-700 bg-slate-950/30' : 'border-slate-300 bg-slate-50'}`}>
-      <span className={`mx-auto flex h-12 w-12 items-center justify-center rounded-2xl ${isDark ? 'bg-slate-800/70 text-indigo-300' : 'bg-indigo-50 text-indigo-600'}`}>
+    <div role="status" className={`rounded-2xl border border-dashed px-6 py-10 text-center sm:px-8 ${isDark ? 'border-slate-700 bg-slate-950/30' : 'border-slate-300 bg-slate-50'}`}>
+      <span className={`mx-auto flex h-12 w-12 items-center justify-center rounded-2xl ring-1 ${isDark ? 'bg-slate-800/70 text-indigo-300 ring-slate-700' : 'bg-indigo-50 text-indigo-600 ring-indigo-100'}`}>
         <Icon className="h-5 w-5" aria-hidden="true" />
       </span>
       <h3 className={`mt-4 text-sm font-semibold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>{title}</h3>
