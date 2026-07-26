@@ -136,6 +136,10 @@ export function useAppData() {
     const updated = dataService.fetchAllData();
     setNotifications(updated.notifications);
   }, []);
+  const handleMarkAllNotificationsRead = useCallback(() => {
+    dataService.markAllNotificationsRead();
+    setNotifications(dataService.fetchAllData().notifications);
+  }, []);
 
   const handleResetData = useCallback(() => {
     dataService.resetData();
@@ -180,6 +184,7 @@ export function useAppData() {
     handleSaveNote,
     handleDeleteNote,
     handleMarkNotificationRead,
+    handleMarkAllNotificationsRead,
     handleResetData,
     handleLoadSeedData,
   };

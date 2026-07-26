@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { timeAgo } from '../utils/productExperience';
 import {
   Home,
   Briefcase,
@@ -23,6 +24,7 @@ import {
   X,
   ChevronRight,
   MessageSquarePlus,
+  History,
 } from 'lucide-react';
 import { AppNotification } from '../types';
 
@@ -33,6 +35,7 @@ interface MobileNavigationProps {
   onToggleTheme: () => void;
   notifications: AppNotification[];
   onMarkNotificationRead: (id: string) => void;
+  onMarkAllNotificationsRead: () => void;
   userName?: string;
   userSchool?: string;
   userGrad?: string;
@@ -50,6 +53,7 @@ export default function MobileNavigation({
   onToggleTheme,
   notifications,
   onMarkNotificationRead,
+  onMarkAllNotificationsRead,
   userName = 'Student',
   userSchool = 'Not Set',
   userGrad = 'Not Set',
@@ -92,6 +96,7 @@ export default function MobileNavigation({
     { id: 'certificates', label: 'Certificates', icon: Award },
     { id: 'notes', label: 'Knowledge Hub', icon: FileText },
     { id: 'feedback', label: 'Feedback', icon: MessageSquarePlus },
+    { id: 'changelog', label: 'Changelog', icon: History },
   ];
 
   // ONLY 5 bottom navigation items as explicitly requested: Home, Opportunities, Journey, Nova, Profile
@@ -197,11 +202,7 @@ export default function MobileNavigation({
                     <h4 className="font-display font-semibold text-xs uppercase tracking-wider text-slate-400">
                       Notifications
                     </h4>
-                    {unreadCount > 0 && (
-                      <span className="text-[10px] bg-rose-500/15 text-rose-400 px-1.5 py-0.5 rounded-full font-medium">
-                        {unreadCount} new
-                      </span>
-                    )}
+                    {unreadCount > 0 && <button type="button" onClick={onMarkAllNotificationsRead} className="text-[10px] font-medium text-indigo-400 hover:text-indigo-300">Mark all read</button>}
                   </div>
                   <div className="max-h-56 overflow-y-auto space-y-2 pr-1">
                     {notifications.length === 0 ? (
@@ -223,6 +224,7 @@ export default function MobileNavigation({
                             <div className="space-y-0.5 flex-1">
                               <h5 className="font-medium text-xs leading-tight">{not.title}</h5>
                               <p className="text-[11px] text-slate-400 leading-normal">{not.message}</p>
+                              <p className="pt-1 text-[10px] text-slate-500">{not.type} · {timeAgo(not.date)}</p>
                               {!not.read && (
                                 <button
                                   type="button"

@@ -27,6 +27,11 @@ import CertificatesView from './components/CertificatesView';
 import NotesView from './components/NotesView';
 import SettingsView from './components/SettingsView';
 import FeedbackView from './components/FeedbackView';
+import ChangelogView from './components/ChangelogView';
+import GlobalSearch from './components/GlobalSearch';
+import OnboardingFlow from './components/OnboardingFlow';
+import WhatsNewModal from './components/WhatsNewModal';
+import { completeOnboarding, dismissWhatsNew, isOnboardingComplete, shouldShowWhatsNew } from './utils/productExperience';
 
 export default function App() {
   // Navigation View State
@@ -35,6 +40,9 @@ export default function App() {
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'offline'>('offline');
   const [authBusy, setAuthBusy] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(() => !isOnboardingComplete());
+  const [isWhatsNewOpen, setIsWhatsNewOpen] = useState(() => isOnboardingComplete() && shouldShowWhatsNew());
   const cloudSync = useMemo(() => new CloudSyncService(), []);
   const isClearingAccount = useRef(false);
 
@@ -66,6 +74,7 @@ export default function App() {
     handleSaveNote,
     handleDeleteNote,
     handleMarkNotificationRead,
+    handleMarkAllNotificationsRead,
     handleResetData,
     handleLoadSeedData,
   } = useAppData();
@@ -81,6 +90,18 @@ export default function App() {
       window.removeEventListener('error', trackAppError);
       window.removeEventListener('unhandledrejection', trackAppError);
     };
+  }, []);
+
+  useEffect(() => {
+    const handleShortcut = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setIsSearchOpen(true);
+      }
+      if (event.key === 'Escape') setIsSearchOpen(false);
+    };
+    window.addEventListener('keydown', handleShortcut);
+    return () => window.removeEventListener('keydown', handleShortcut);
   }, []);
 
   useEffect(() => {
@@ -277,6 +298,8 @@ export default function App() {
         );
       case 'feedback':
         return <FeedbackView theme={theme} user={sessionUser} />;
+      case 'changelog':
+        return <ChangelogView />;
       default:
         return <div className="text-white text-center py-20">View not found.</div>;
     }
@@ -294,6 +317,10 @@ export default function App() {
         <div className="absolute bottom-[-15%] right-[-10%] h-[60%] w-[60%] rounded-full bg-purple-500/5 blur-[150px]" />
       </div>
 
+      <button type="button" onClick={() => setIsSearchOpen(true)} className="fixed right-6 top-5 z-20 hidden items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/90 px-3 py-2 text-xs font-medium text-slate-400 shadow-lg transition hover:border-slate-700 hover:text-white md:inline-flex" aria-label="Open global search">
+        Search workspace <span className="rounded border border-slate-700 px-1.5 py-0.5 text-[10px]">Ctrl K</span>
+      </button>
+
       {/* Sidebar Navigation (Desktop) */}
       <Sidebar
         currentView={currentView}
@@ -302,6 +329,7 @@ export default function App() {
         onToggleTheme={toggleTheme}
         notifications={notifications}
         onMarkNotificationRead={handleMarkNotificationRead}
+        onMarkAllNotificationsRead={handleMarkAllNotificationsRead}
         userName={userName}
         userSchool={userSchool}
         userGrad={userGrad}
@@ -320,6 +348,7 @@ export default function App() {
         onToggleTheme={toggleTheme}
         notifications={notifications}
         onMarkNotificationRead={handleMarkNotificationRead}
+        onMarkAllNotificationsRead={handleMarkAllNotificationsRead}
         userName={userName}
         userSchool={userSchool}
         userGrad={userGrad}
@@ -328,6 +357,24 @@ export default function App() {
         xpForCurrentLevel={xpForCurrentLevel}
         xpProgress={xpProgress}
         streak={streak}
+      />
+
+      <GlobalSearch
+        open={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+        onNavigate={setCurrentView}
+        opportunities={opportunities}
+        notes={notes}
+        certificates={certificates}
+      />
+      <OnboardingFlow
+        open={isOnboardingOpen}
+        onNavigate={setCurrentView}
+        onComplete={() => { completeOnboarding(); setIsOnboardingOpen(false); setIsWhatsNewOpen(shouldShowWhatsNew()); }}
+      />
+      <WhatsNewModal
+        open={isWhatsNewOpen}
+        onClose={() => { dismissWhatsNew(); setIsWhatsNewOpen(false); }}
       />
 
       {/* Main Workspace Frame */}

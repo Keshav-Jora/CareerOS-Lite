@@ -105,6 +105,10 @@ export const dataService = {
     this.repository.markNotificationRead(id);
     notifyDataChanged();
   },
+  markAllNotificationsRead(): void {
+    this.repository.markAllNotificationsRead();
+    notifyDataChanged();
+  },
 
   // Account Reset / Seed Data
   resetData(): void {

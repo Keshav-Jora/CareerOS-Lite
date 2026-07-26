@@ -67,6 +67,7 @@ export default function DashboardView({
   onAddOpportunityTrigger,
   onNavigateToView,
   userName = 'Student',
+  userSchool,
   dailyMission,
   onSaveMission,
   onDeleteMission,
@@ -89,6 +90,8 @@ export default function DashboardView({
   const surface = isDark ? 'surface-elevated border-slate-800 bg-slate-900/60' : 'surface-elevated border-slate-200 bg-white/90 shadow-sm';
   const mutedText = isDark ? 'text-slate-400' : 'text-slate-600';
   const headingText = isDark ? 'text-white' : 'text-slate-950';
+  const profileChecks = [Boolean(userName && userName !== 'Student'), Boolean(userSchool && userSchool !== 'Not Set'), opportunities.length > 0];
+  const profileCompletion = Math.round((profileChecks.filter(Boolean).length / profileChecks.length) * 100);
   const trendLabel = intelligence.weeklyTrend === 0
     ? 'Stable this week'
     : `${intelligence.weeklyTrend > 0 ? '↑' : '↓'} ${Math.abs(intelligence.weeklyTrend)}h this week`;
@@ -113,6 +116,13 @@ export default function DashboardView({
           </button>
         </div>
       </header>
+
+      {profileCompletion < 100 && (
+        <section className={`flex flex-col gap-4 rounded-2xl border p-4 sm:flex-row sm:items-center sm:justify-between ${surface}`} aria-labelledby="profile-completion-title">
+          <div className="min-w-0"><div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-indigo-400" aria-hidden="true" /><h2 id="profile-completion-title" className={`text-sm font-semibold ${headingText}`}>Profile completion</h2><span className={`text-xs ${mutedText}`}>{profileCompletion}%</span></div><p className={`mt-1 text-sm ${mutedText}`}>Complete your profile to make guidance more relevant.</p><div className={`mt-3 h-1.5 overflow-hidden rounded-full ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`}><div className="h-full rounded-full bg-indigo-400" style={{ width: `${profileCompletion}%` }} /></div></div>
+          <button type="button" onClick={() => onNavigateToView(userSchool ? 'opportunities' : 'settings')} className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-xl bg-indigo-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400">Complete profile</button>
+        </section>
+      )}
 
       <section className={`relative overflow-hidden rounded-3xl border p-6 sm:p-8 ${surface}`} aria-labelledby="career-health-title">
         <div className="pointer-events-none absolute -right-28 -top-28 h-80 w-80 rounded-full bg-indigo-500/10 blur-3xl" />

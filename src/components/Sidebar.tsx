@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { timeAgo } from '../utils/productExperience';
 import {
   LayoutDashboard,
   Sparkles,
@@ -21,6 +22,7 @@ import {
   Info,
   Zap,
   MessageSquarePlus,
+  History,
 } from 'lucide-react';
 import { AppNotification } from '../types';
 
@@ -31,6 +33,7 @@ interface SidebarProps {
   onToggleTheme: () => void;
   notifications: AppNotification[];
   onMarkNotificationRead: (id: string) => void;
+  onMarkAllNotificationsRead: () => void;
   userName?: string;
   userSchool?: string;
   userGrad?: string;
@@ -48,6 +51,7 @@ export default function Sidebar({
   onToggleTheme,
   notifications,
   onMarkNotificationRead,
+  onMarkAllNotificationsRead,
   userName = 'Student',
   userSchool = 'Not Set',
   userGrad = 'Not Set',
@@ -93,6 +97,7 @@ export default function Sidebar({
     { id: 'certificates', label: 'Certificates', icon: Award },
     { id: 'notes', label: 'Notes', icon: FileText },
     { id: 'feedback', label: 'Feedback', icon: MessageSquarePlus },
+    { id: 'changelog', label: 'Changelog', icon: History },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
@@ -255,9 +260,7 @@ export default function Sidebar({
                       Reminders & Alerts
                     </h4>
                     {unreadCount > 0 && (
-                      <span className="text-[10px] bg-rose-500/15 text-rose-400 px-1.5 py-0.5 rounded-full font-medium">
-                        {unreadCount} new
-                      </span>
+                      <button type="button" onClick={onMarkAllNotificationsRead} className="text-[10px] bg-rose-500/15 text-rose-400 px-1.5 py-0.5 rounded-full font-medium hover:bg-rose-500/25">Mark all read</button>
                     )}
                   </div>
                   <div className="max-h-60 overflow-y-auto space-y-2.5 pr-1" role="status" aria-live="polite">
@@ -282,6 +285,8 @@ export default function Sidebar({
                                 {not.title}
                               </h5>
                               <p className="text-[11px] text-slate-400 leading-normal">{not.message}</p>
+                              <p className="pt-1 text-[10px] text-slate-500">{not.type} · {timeAgo(not.date)}</p>
+                              <p className="text-[10px] text-slate-500">{not.type} · {not.date}</p>
                               {!not.read && (
                                 <button
                                   type="button"

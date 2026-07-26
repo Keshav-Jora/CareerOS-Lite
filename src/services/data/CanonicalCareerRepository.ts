@@ -97,6 +97,7 @@ export class CanonicalCareerRepository {
   getNotifications(): AppNotification[] { return storage.getNotifications(); }
   getActivities(): ActivityLog[] { return storage.getActivityLogs(); }
   markNotificationRead(id: string): void { storage.markNotificationRead(id); }
+  markAllNotificationsRead(): void { storage.markAllNotificationsRead(); }
   initialize(): void { storage.initializeStorage(); }
   reset(): void { storage.resetStorageData(); }
   loadSeedData(): void { storage.loadSeedData(); }

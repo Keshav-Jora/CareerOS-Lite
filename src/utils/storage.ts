@@ -580,6 +580,7 @@ export const markNotificationRead = (id: string): void => {
     saveNotifications(notifications);
   }
 };
+export const markAllNotificationsRead = (): void => saveNotifications(getNotifications().map((notification) => ({ ...notification, read: true })));
 export const addNotification = (title: string, message: string, type: AppNotification['type'] = 'info'): void => {
   const notifications = getNotifications();
   const newNot: AppNotification = {
@@ -587,7 +588,7 @@ export const addNotification = (title: string, message: string, type: AppNotific
     title,
     message,
     type,
-    date: new Date().toISOString().split('T')[0],
+    date: new Date().toISOString(),
     read: false,
   };
   notifications.unshift(newNot);
