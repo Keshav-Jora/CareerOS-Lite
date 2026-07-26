@@ -34,8 +34,10 @@ export class AnalyticsRepository {
       void setDoc(eventReference, document).then(() => {
         if (AnalyticsConfig.isDevelopment) console.info(`[Analytics ${new Date().toISOString()}] analytics event write resolved`, { documentPath: eventReference.path, documentId: eventReference.id, event: event.event, projectId: getFirebaseApp()?.options.projectId });
       }).catch((error: unknown) => {
+        if (!AnalyticsConfig.isDevelopment) return;
         const firebaseError = error as { code?: unknown; message?: unknown };
         console.error(`[Analytics ${new Date().toISOString()}] analytics event write rejected`, {
+          event: event.event,
           code: firebaseError.code,
           message: firebaseError.message,
           collectionPath: events.path,
@@ -44,7 +46,7 @@ export class AnalyticsRepository {
         });
       });
     } catch (error) {
-      console.error('[Analytics] Firestore write setup failed', error);
+      if (AnalyticsConfig.isDevelopment) console.error('[Analytics] Firestore write setup failed', error);
     }
   }
 }
