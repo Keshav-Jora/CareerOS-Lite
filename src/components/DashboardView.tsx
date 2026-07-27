@@ -25,6 +25,7 @@ import type { ActivityLog, Certificate, DailyProgress, Note, Opportunity, Timeli
 import type { CanonicalCareerData, CareerMission, MissionTask } from '../types/career-data';
 import { useDashboardIntelligence } from '../hooks/useDashboardIntelligence';
 import { CareerStatisticsService } from '../services/data/CareerStatisticsService';
+import type { DashboardWidgetPreferences } from '../utils/storage';
 
 interface DashboardViewProps {
   theme: 'light' | 'dark';
@@ -42,6 +43,7 @@ interface DashboardViewProps {
   xpProgress?: number;
   streak?: number;
   userName?: string;
+  widgetPreferences: DashboardWidgetPreferences;
   dailyMission?: CareerMission;
   onSaveMission: (mission: CareerMission) => void;
   onDeleteMission: (id: string) => void;
@@ -66,6 +68,7 @@ export default function DashboardView({
   onAddOpportunityTrigger,
   onNavigateToView,
   userName = 'Student',
+  widgetPreferences,
   dailyMission,
   onSaveMission,
   onDeleteMission,
@@ -113,7 +116,7 @@ export default function DashboardView({
         </div>
       </header>
 
-      <section className={`relative overflow-hidden rounded-3xl border p-6 sm:p-8 ${surface}`} aria-labelledby="career-health-title">
+      {widgetPreferences.careerHealth && <section className={`relative overflow-hidden rounded-3xl border p-6 sm:p-8 ${surface}`} aria-labelledby="career-health-title">
         <div className="pointer-events-none absolute -right-28 -top-28 h-80 w-80 rounded-full bg-indigo-500/10 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-24 left-1/4 h-48 w-80 rounded-full bg-violet-500/10 blur-3xl" />
         <div className="relative grid gap-8 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:items-center">
@@ -137,9 +140,9 @@ export default function DashboardView({
             <p className={`mt-2 max-w-52 text-sm leading-6 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Complete your next best action, then log the outcome to keep Nova’s view accurate.</p>
           </div>
         </div>
-      </section>
+      </section>}
 
-      <section className={`rounded-3xl border p-6 shadow-xl shadow-indigo-950/10 sm:p-7 ${isDark ? 'border-indigo-400/20 bg-slate-900/80' : 'border-indigo-100 bg-white shadow-indigo-200/30'}`} aria-labelledby="nova-recommendation-title">
+      {widgetPreferences.novaRecommendation && <section className={`rounded-3xl border p-6 shadow-xl shadow-indigo-950/10 sm:p-7 ${isDark ? 'border-indigo-400/20 bg-slate-900/80' : 'border-indigo-100 bg-white shadow-indigo-200/30'}`} aria-labelledby="nova-recommendation-title">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0 max-w-3xl">
             <div className="flex items-center gap-2 text-sm font-semibold text-violet-400"><BrainCircuit className="h-4 w-4" aria-hidden="true" /> Nova recommendation</div>
@@ -169,13 +172,19 @@ export default function DashboardView({
             Ask Nova <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
-      </section>
+      </section>}
 
-      <div className="grid gap-6 xl:grid-cols-2">
+      {(widgetPreferences.todaysMission || widgetPreferences.careerSnapshot) && <div className="grid gap-6 xl:grid-cols-2">
+        {widgetPreferences.todaysMission &&
         <DailyMissionCard theme={theme} mission={dailyMission} fallbackTitle={recommendation.todayMission.title} fallbackDescription={recommendation.todayMission.description} fallbackPriority={recommendation.todayMission.priority} fallbackDuration={intelligence.estimatedDuration} onSave={onSaveMission} onDelete={onDeleteMission} />
+        }
 
+        {widgetPreferences.careerSnapshot &&
         <CareerSnapshot theme={theme} statistics={snapshotStatistics} progressEntries={progress.length} onNavigate={onNavigateToView} />
-      </div>
+        }
+      </div>}
+
+      <div className="grid gap-6 xl:grid-cols-2"><CareerMilestones theme={theme} snapshot={careerSnapshot} opportunities={opportunities} certificates={certificates} timelineEntries={timelineEntries} /><WeeklySummary theme={theme} opportunities={opportunities} certificates={certificates} timelineEntries={timelineEntries} snapshot={careerSnapshot} nextFocus={recommendation.highestPriority.title} /></div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(300px,0.75fr)]">
           <section className={`rounded-3xl border p-5 sm:p-6 ${surface}`} aria-labelledby="top-opportunity-title">
@@ -194,7 +203,7 @@ export default function DashboardView({
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center"><div><div className="flex items-center gap-2 text-sm font-semibold text-fuchsia-400"><Sparkles className="h-4 w-4" aria-hidden="true" /> Decision memory</div><h2 id="decision-memory-title" className={`mt-2 font-display text-lg font-bold ${headingText}`}>{recommendation.nextBestAction.title}</h2><p className={`mt-1 text-sm ${mutedText}`}>{intelligence.latestActivity ? `Latest recorded outcome: ${intelligence.latestActivity.action}` : 'Outcome tracking begins when you log progress in your Journey.'}</p></div><button type="button" onClick={() => onNavigateToView('journey')} className={`inline-flex items-center gap-2 text-sm font-semibold ${isDark ? 'text-indigo-300 hover:text-indigo-200' : 'text-indigo-600 hover:text-indigo-700'} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400`}>Open Journey <ArrowRight className="h-4 w-4" aria-hidden="true" /></button></div>
       </section>
 
-      <section aria-labelledby="quick-actions-title"><div className="mb-3 flex items-center gap-2 px-1"><ListTodo className="h-4 w-4 text-indigo-400" aria-hidden="true" /><h2 id="quick-actions-title" className={`font-display text-lg font-bold ${headingText}`}>Quick actions</h2></div><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{quickActions.map((action) => { const Icon = action.icon; const onClick = action.destination === 'opportunities' ? onAddOpportunityTrigger : () => onNavigateToView(action.destination); return <motion.button type="button" whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }} transition={{ duration: 0.2, ease: 'easeOut' }} key={action.label} onClick={onClick} className={`group flex items-center gap-4 rounded-2xl border p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${surface}`}><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-300 transition group-hover:bg-indigo-500/20"><Icon className="h-5 w-5" aria-hidden="true" /></span><span className="min-w-0 flex-1"><span className={`block text-sm font-semibold ${headingText}`}>{action.label}</span><span className={`mt-0.5 block text-xs ${mutedText}`}>{action.description}</span></span><ChevronRight className={`h-4 w-4 ${isDark ? 'text-slate-600' : 'text-slate-400'}`} aria-hidden="true" /></motion.button>; })}</div></section>
+      {widgetPreferences.quickActions && <section aria-labelledby="quick-actions-title"><div className="mb-3 flex items-center gap-2 px-1"><ListTodo className="h-4 w-4 text-indigo-400" aria-hidden="true" /><h2 id="quick-actions-title" className={`font-display text-lg font-bold ${headingText}`}>Quick actions</h2></div><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{quickActions.map((action) => { const Icon = action.icon; const onClick = action.destination === 'opportunities' ? onAddOpportunityTrigger : () => onNavigateToView(action.destination); return <motion.button type="button" whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }} transition={{ duration: 0.2, ease: 'easeOut' }} key={action.label} onClick={onClick} className={`group flex items-center gap-4 rounded-2xl border p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${surface}`}><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-300 transition group-hover:bg-indigo-500/20"><Icon className="h-5 w-5" aria-hidden="true" /></span><span className="min-w-0 flex-1"><span className={`block text-sm font-semibold ${headingText}`}>{action.label}</span><span className={`mt-0.5 block text-xs ${mutedText}`}>{action.description}</span></span><ChevronRight className={`h-4 w-4 ${isDark ? 'text-slate-600' : 'text-slate-400'}`} aria-hidden="true" /></motion.button>; })}</div></section>}
 
       <div className={`flex items-center gap-2 px-1 text-xs ${isDark ? 'text-slate-600' : 'text-slate-500'}`}><CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" aria-hidden="true" /> This Command Center refreshes whenever your CareerOS data changes.</div>
     </div>
@@ -259,6 +268,38 @@ function CareerSnapshot({ theme, statistics, progressEntries, onNavigate }: { th
     { label: 'Progress entries', value: progressEntries, icon: TrendingUp, destination: 'progress' },
   ];
   return <section className={`rounded-3xl border p-6 ${isDark ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-white/90 shadow-sm'}`} aria-labelledby="career-snapshot-title"><div className="flex items-center justify-between gap-4"><div><div className="flex items-center gap-2 text-sm font-semibold text-sky-400"><ShieldCheck className="h-4 w-4" aria-hidden="true" /> Career snapshot</div><h2 id="career-snapshot-title" className={`mt-2 font-display text-xl font-bold ${isDark ? 'text-white' : 'text-slate-950'}`}>Your tracked career data</h2></div><span className="text-xs text-slate-400">Live repository view</span></div><div className="mt-5 grid auto-rows-fr grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-3">{items.map((item) => { const Icon = item.icon; return <button type="button" key={item.label} onClick={() => onNavigate(item.destination)} className={`flex h-full min-h-32 flex-col rounded-2xl border p-4 text-left transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${isDark ? 'border-slate-800 bg-slate-950/35 hover:border-slate-700' : 'border-slate-200 bg-slate-50 hover:border-slate-300'}`}><Icon className="h-4 w-4 shrink-0 text-indigo-400" aria-hidden="true" /><p className={`mt-4 text-2xl font-bold leading-none tabular-nums ${isDark ? 'text-white' : 'text-slate-950'}`}>{item.value}</p><p className="mt-auto min-h-8 pt-3 text-[10px] font-medium leading-4 text-balance text-slate-400 [overflow-wrap:normal]">{item.label}</p></button>; })}</div></section>;
+}
+function CareerMilestones({ theme, snapshot, opportunities, certificates, timelineEntries }: { theme: 'light' | 'dark'; snapshot: CanonicalCareerData | null; opportunities: Opportunity[]; certificates: Certificate[]; timelineEntries: TimelineEntry[] }) {
+  const isDark = theme === 'dark';
+  const milestones = [
+    ['First Goal', Boolean(snapshot?.goals.length)],
+    ['First Opportunity', opportunities.length > 0],
+    ['First Certificate', certificates.length > 0],
+    ['First Project', Boolean(snapshot?.projects.length)],
+    ['Portfolio Published', Boolean(snapshot?.projects.some((project) => project.links.length > 0))],
+    ['First Journey Entry', timelineEntries.length > 0],
+  ] as const;
+  const unlocked = milestones.filter(([, complete]) => complete).length;
+  return <section className={`rounded-3xl border p-5 sm:p-6 ${isDark ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-white/90 shadow-sm'}`} aria-labelledby="career-milestones-title"><div className="flex items-start justify-between gap-4"><div><div className="flex items-center gap-2 text-sm font-semibold text-amber-400"><Award className="h-4 w-4" aria-hidden="true" /> Career milestones</div><h2 id="career-milestones-title" className={`mt-2 font-display text-xl font-bold ${isDark ? 'text-white' : 'text-slate-950'}`}>{unlocked} of {milestones.length} unlocked</h2></div><span className="rounded-full bg-amber-400/10 px-2.5 py-1 text-xs font-semibold text-amber-300">Data-led</span></div><div className="mt-5 grid gap-2 sm:grid-cols-2">{milestones.map(([label, complete]) => <div key={label} className={`flex min-h-10 items-center gap-2 rounded-xl border px-3 py-2 text-sm ${complete ? isDark ? 'border-emerald-400/20 bg-emerald-400/5 text-slate-200' : 'border-emerald-200 bg-emerald-50 text-slate-800' : isDark ? 'border-slate-800 bg-slate-950/30 text-slate-500' : 'border-slate-200 bg-slate-50 text-slate-500'}`}><span className={complete ? 'text-emerald-400' : 'text-slate-600'}>{complete ? '✓' : '○'}</span>{label}</div>)}</div></section>;
+}
+function WeeklySummary({ theme, opportunities, certificates, timelineEntries, snapshot, nextFocus }: { theme: 'light' | 'dark'; opportunities: Opportunity[]; certificates: Certificate[]; timelineEntries: TimelineEntry[]; snapshot: CanonicalCareerData | null; nextFocus: string }) {
+  const isDark = theme === 'dark';
+  const isThisWeek = (value: string | undefined) => {
+    if (!value) return false;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return false;
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+    return date >= start;
+  };
+  const items = [
+    ['Opportunities added', opportunities.filter((opportunity) => isThisWeek(opportunity.applyDate)).length],
+    ['Goals completed', snapshot?.goals.filter((goal) => goal.status === 'completed' && isThisWeek(goal.updatedAt)).length ?? 0],
+    ['Journey entries', timelineEntries.filter((entry) => isThisWeek(entry.date)).length],
+    ['Certificates added', certificates.filter((certificate) => isThisWeek(certificate.date)).length],
+  ] as const;
+  return <section className={`rounded-3xl border p-5 sm:p-6 ${isDark ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-white/90 shadow-sm'}`} aria-labelledby="weekly-summary-title"><div className="flex items-center gap-2 text-sm font-semibold text-emerald-400"><CalendarDays className="h-4 w-4" aria-hidden="true" /> Weekly summary</div><h2 id="weekly-summary-title" className={`mt-2 font-display text-xl font-bold ${isDark ? 'text-white' : 'text-slate-950'}`}>This week at a glance</h2><div className="mt-5 grid grid-cols-2 gap-3">{items.map(([label, value]) => <div key={label} className={`rounded-xl border p-3 ${isDark ? 'border-slate-800 bg-slate-950/35' : 'border-slate-200 bg-slate-50'}`}><p className={`text-xl font-bold tabular-nums ${isDark ? 'text-white' : 'text-slate-950'}`}>{value}</p><p className="mt-1 text-xs leading-4 text-slate-400">{label}</p></div>)}</div><div className={`mt-4 rounded-xl border px-3 py-3 ${isDark ? 'border-indigo-400/20 bg-indigo-500/10' : 'border-indigo-100 bg-indigo-50'}`}><p className="text-[11px] font-semibold uppercase tracking-wide text-indigo-300">Next focus</p><p className={`mt-1 text-sm font-semibold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>{nextFocus}</p></div></section>;
 }
 function EmptyMomentumState({ isDark, onLog }: { isDark: boolean; onLog: () => void }) { return <div className={`mt-5 rounded-2xl border border-dashed p-5 ${isDark ? 'border-slate-700 bg-slate-950/30' : 'border-slate-300 bg-slate-50'}`}><CircleAlert className="h-5 w-5 text-emerald-400" aria-hidden="true" /><p className={`mt-3 text-sm font-semibold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>No progress logged this week</p><p className={`mt-1 text-sm ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Log one focused session to start building a visible learning rhythm.</p><button type="button" onClick={onLog} className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-indigo-400 hover:text-indigo-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400">Log practice <ArrowRight className="h-4 w-4" aria-hidden="true" /></button></div>; }
 function MetricPill({ label, value, isDark }: { label: string; value: string; isDark: boolean }) { return <span className={`rounded-xl border px-3 py-2 text-xs ${isDark ? 'border-slate-700 bg-slate-950/30 text-slate-300' : 'border-slate-200 bg-white text-slate-700'}`}><span className={`mr-1.5 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>{label}</span><span className="font-semibold">{value}</span></span>; }

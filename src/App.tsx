@@ -9,7 +9,7 @@ import { CloudSyncService } from './services/cloud/CloudSyncService';
 import { SessionManager } from './services/auth/SessionManager';
 import { AuthService } from './services/auth/AuthService';
 import { dataService } from './services/dataService';
-import { setCareerDataUpdatedAt } from './utils/storage';
+import { getDashboardWidgetPreferences, saveDashboardWidgetPreferences, setCareerDataUpdatedAt, type DashboardWidgetPreferences } from './utils/storage';
 import { AnalyticsService } from './analytics/AnalyticsService';
 
 // Component Imports
@@ -38,6 +38,7 @@ export default function App() {
   const [authBusy, setAuthBusy] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [dashboardPreferences, setDashboardPreferences] = useState<DashboardWidgetPreferences>(() => getDashboardWidgetPreferences());
   const cloudSync = useMemo(() => new CloudSyncService(), []);
   const isClearingAccount = useRef(false);
 
@@ -201,6 +202,7 @@ export default function App() {
             xpProgress={xpProgress}
             streak={streak}
             userName={userName}
+            widgetPreferences={dashboardPreferences}
             dailyMission={canonicalData?.missions.find((mission) => mission.date === new Date().toISOString().slice(0, 10))}
             onSaveMission={handleSaveMission}
             onDeleteMission={handleDeleteMission}
@@ -288,6 +290,8 @@ export default function App() {
             onSignOut={signOut}
             authBusy={authBusy}
             authError={authError}
+            dashboardPreferences={dashboardPreferences}
+            onDashboardPreferencesChange={(preferences) => { saveDashboardWidgetPreferences(preferences); setDashboardPreferences(preferences); }}
           />
         );
       case 'feedback':

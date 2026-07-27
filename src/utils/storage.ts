@@ -23,6 +23,36 @@ const KEYS = {
   CONNECTIONS: 'career_os_connections',
   CONVERSATIONS: 'career_os_nova_conversations',
   DATA_UPDATED_AT: 'career_os_data_updated_at',
+  DASHBOARD_PREFERENCES: 'career_os_dashboard_preferences',
+};
+
+export interface DashboardWidgetPreferences {
+  careerHealth: boolean;
+  novaRecommendation: boolean;
+  todaysMission: boolean;
+  careerSnapshot: boolean;
+  quickActions: boolean;
+}
+
+const DEFAULT_DASHBOARD_PREFERENCES: DashboardWidgetPreferences = {
+  careerHealth: true,
+  novaRecommendation: true,
+  todaysMission: true,
+  careerSnapshot: true,
+  quickActions: true,
+};
+
+export const getDashboardWidgetPreferences = (): DashboardWidgetPreferences => {
+  try {
+    const saved = localStorage.getItem(KEYS.DASHBOARD_PREFERENCES);
+    return saved ? { ...DEFAULT_DASHBOARD_PREFERENCES, ...JSON.parse(saved) as Partial<DashboardWidgetPreferences> } : DEFAULT_DASHBOARD_PREFERENCES;
+  } catch {
+    return DEFAULT_DASHBOARD_PREFERENCES;
+  }
+};
+
+export const saveDashboardWidgetPreferences = (preferences: DashboardWidgetPreferences): void => {
+  localStorage.setItem(KEYS.DASHBOARD_PREFERENCES, JSON.stringify(preferences));
 };
 
 export const getCareerDataUpdatedAt = (): string | null => localStorage.getItem(KEYS.DATA_UPDATED_AT);
@@ -615,8 +645,8 @@ const updateDeadlineNotifications = (): void => {
       if (!exists) {
         notifications.unshift({
           id: notId,
-          title: `Upcoming Deadline: ${opp.title}`,
-          message: `${opp.organization} deadline is in ${daysDiff} days! Make sure to update your application status.`,
+          title: `Opportunity deadline approaching: ${opp.title}`,
+          message: `${opp.organization} closes in ${daysDiff} days. Review your application and next steps.`,
           type: 'warning',
           date: new Date().toISOString().split('T')[0],
           read: false,

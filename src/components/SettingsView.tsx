@@ -9,8 +9,9 @@ import {
   RotateCcw,
   Sparkles,
   Info,
+  LayoutDashboard,
 } from 'lucide-react';
-import { exportDataJSON, importDataJSON } from '../utils/storage';
+import { exportDataJSON, importDataJSON, type DashboardWidgetPreferences } from '../utils/storage';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { AuthControls } from './AuthControls';
 
@@ -26,9 +27,11 @@ interface SettingsViewProps {
   onSignOut: () => void;
   authBusy: boolean;
   authError: string | null;
+  dashboardPreferences: DashboardWidgetPreferences;
+  onDashboardPreferencesChange: (preferences: DashboardWidgetPreferences) => void;
 }
 
-export default function SettingsView({ theme, onToggleTheme, onRefreshData, onResetData, onLoadSeedData, authUser, syncStatus, onSignIn, onSignOut, authBusy, authError }: SettingsViewProps) {
+export default function SettingsView({ theme, onToggleTheme, onRefreshData, onResetData, onLoadSeedData, authUser, syncStatus, onSignIn, onSignOut, authBusy, authError, dashboardPreferences, onDashboardPreferencesChange }: SettingsViewProps) {
   // Local Profile Settings (persisted to LocalStorage for profile mapping)
   const [name, setName] = useState(() => localStorage.getItem('career_os_user_name') || 'Student');
   const [affiliation, setAffiliation] = useState(
@@ -224,6 +227,19 @@ export default function SettingsView({ theme, onToggleTheme, onRefreshData, onRe
               </div>
             </form>
           </div>}
+
+          <div className={`p-5 rounded-2xl border ${theme === 'dark' ? 'glass-panel-dark' : 'glass-panel-light'} space-y-4`}>
+            <div className="flex items-center gap-2 pb-3 border-b border-slate-800/20"><LayoutDashboard className="h-5 w-5 text-indigo-400" /><div><h3 className="font-display font-bold text-sm text-slate-200">Dashboard Preferences</h3><p className="mt-0.5 text-xs text-slate-400">Choose which dashboard widgets you want to see.</p></div></div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {([
+                ['careerHealth', 'Career Health'],
+                ['novaRecommendation', 'Nova Recommendation'],
+                ['todaysMission', "Today's Mission"],
+                ['careerSnapshot', 'Career Snapshot'],
+                ['quickActions', 'Quick Actions'],
+              ] as const).map(([key, label]) => <label key={key} className={`flex min-h-11 cursor-pointer items-center justify-between rounded-xl border px-3 py-2 text-sm ${theme === 'dark' ? 'border-slate-800 bg-slate-950/30 text-slate-200' : 'border-slate-200 bg-white text-slate-800'}`}><span>{label}</span><input type="checkbox" checked={dashboardPreferences[key]} onChange={() => onDashboardPreferencesChange({ ...dashboardPreferences, [key]: !dashboardPreferences[key] })} className="h-4 w-4 accent-indigo-500" /></label>)}
+            </div>
+          </div>
 
           {/* Local storage sync options */}
           <div
