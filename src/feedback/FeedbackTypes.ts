@@ -1,5 +1,5 @@
 export type FeedbackKind = 'general' | 'bug' | 'feature';
-export type FeedbackStatus = 'open' | 'in_progress' | 'closed';
+export type FeedbackStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
 
 export interface FeedbackSubmission {
   rating: number;

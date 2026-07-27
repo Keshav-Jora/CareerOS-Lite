@@ -33,6 +33,7 @@ export interface AdminUserSummary extends Omit<AdminUserRecord, 'status'> {
   certificates: number;
   journeyEntries: number;
   notes: number;
+  opportunities: number;
   lastActiveAt: Date | null;
 }
 
@@ -54,7 +55,7 @@ export function deriveUserSummaries(records: AnalyticsRecord[], users: AdminUser
     const count = (event: string) => userEvents.filter((item) => item.event === event).length;
     const lastActiveAt = userEvents.reduce<Date | null>((latest, event) => !latest || event.timestamp > latest ? event.timestamp : latest, user.lastSeenAt);
     const currentStatus = presence(user.lastSeenAt);
-    return { ...user, status: currentStatus, lastActiveAt, totalSessions: starts.filter((item) => item.userId === user.uid).length, averageSessionMs: userDurations.length ? Math.round(userDurations.reduce((sum, value) => sum + value, 0) / userDurations.length) : 0, conversations: count('chat_completed'), goalsCreated: count('goal_created'), certificates: count('certificate_added'), journeyEntries: count('journey_added'), notes: count('note_created') };
+    return { ...user, status: currentStatus, lastActiveAt, totalSessions: starts.filter((item) => item.userId === user.uid).length, averageSessionMs: userDurations.length ? Math.round(userDurations.reduce((sum, value) => sum + value, 0) / userDurations.length) : 0, conversations: count('chat_completed'), goalsCreated: count('goal_created'), opportunities: count('opportunities_opened'), certificates: count('certificate_added'), journeyEntries: count('journey_added'), notes: count('note_created') };
   }).sort((left, right) => (right.lastSeenAt?.getTime() ?? 0) - (left.lastSeenAt?.getTime() ?? 0));
 }
 
@@ -96,8 +97,13 @@ export function deriveAnalyticsMetrics(records: AnalyticsRecord[], users: AdminU
   });
   const intents = records.map((item) => typeof item.metadata?.intent === 'string' ? item.metadata.intent : null).filter((value): value is string => Boolean(value));
   const featureUsage = [
-    ['Dashboard', 'dashboard_opened'], ['Nova AI', 'chat_started'], ['Journey', 'journey_opened'], ['Opportunities', 'opportunities_opened'], ['Settings', 'settings_opened'], ['Roadmaps', 'roadmap_generated'],
-  ].map(([label, event]) => ({ label, value: events(event).length }));
+    { label: 'Nova AI', value: events('chat_started').length },
+    { label: 'Journey', value: events('journey_added').length },
+    { label: 'Opportunities', value: events('opportunities_opened').length },
+    { label: 'Notes', value: events('note_created').length },
+    { label: 'Certificates', value: events('certificate_added').length },
+    { label: 'Feedback', value: feedbackPositive + feedbackNegative },
+  ];
   const feedbackTrend = Array.from({ length: 7 }, (_, index) => {
     const start = new Date(now - (6 - index) * DAY); start.setHours(0, 0, 0, 0);
     const end = start.getTime() + DAY;

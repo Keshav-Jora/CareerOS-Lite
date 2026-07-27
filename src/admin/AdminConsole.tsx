@@ -5,7 +5,7 @@ import { SessionManager } from '../services/auth/SessionManager';
 import { AnalyticsDashboardRepository, type AdminUserRecord, type AnalyticsRecord } from './AnalyticsDashboardRepository';
 import { deriveAnalyticsMetrics, deriveRecentActivities, deriveUserSummaries, type AdminUserSummary } from './analyticsMetrics';
 import { RecentActivityTable } from './RecentActivityTable';
-import { UserDirectory, type UserRange } from './UserDirectory';
+import { UserDirectory, type UserActivityFilter, type UserPresenceFilter, type UserRange } from './UserDirectory';
 import { UserProfileDrawer } from './UserProfileDrawer';
 import { FeedbackSection } from './FeedbackSection';
 import type { FeedbackRecord, FeedbackStatus } from '../feedback/FeedbackTypes';
@@ -28,11 +28,14 @@ export default function AdminConsole() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [range, setRange] = useState<UserRange>('all');
+  const [provider, setProvider] = useState('all');
+  const [presence, setPresence] = useState<UserPresenceFilter>('all');
+  const [activity, setActivity] = useState<UserActivityFilter>('all');
   const [selectedUser, setSelectedUser] = useState<AdminUserSummary | null>(null);
   const metrics = useMemo(() => deriveAnalyticsMetrics(records, users), [records, users]);
   const summaries = useMemo(() => deriveUserSummaries(records, users), [records, users]);
   const activities = useMemo(() => deriveRecentActivities(records), [records]);
-  const visibleUsers = useMemo(() => filterUsers(summaries, search, range), [summaries, search, range]);
+  const visibleUsers = useMemo(() => filterUsers(summaries, search, range, provider, presence, activity), [summaries, search, range, provider, presence, activity]);
   const hasGrowthData = metrics.userGrowth.some((point) => point.value > 0);
 
   useEffect(() => new SessionManager().observe((user) => setAccess(user?.emailVerified && user.email && adminEmails.has(user.email.toLowerCase()) ? 'allowed' : 'denied')), []);
@@ -48,16 +51,21 @@ export default function AdminConsole() {
     {loading && !records.length && !users.length && <div className="mb-6 rounded-xl border border-slate-800 bg-slate-900/70 p-4 text-sm text-slate-400" role="status">Loading analytics and user directory…</div>}
     <section aria-label="User metrics" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8"><MetricCard label="Total users" value={metrics.overview.totalUsers} /><MetricCard label="New users today" value={metrics.ownerOverview.newUsersToday} /><MetricCard label="Returning users" value={metrics.userInsights.returningUsers} /><MetricCard label="DAU" value={metrics.overview.dau} /><MetricCard label="WAU" value={metrics.overview.wau} /><MetricCard label="MAU" value={metrics.overview.mau} /><MetricCard label="Avg. session" value={duration(metrics.overview.averageSessionMs)} /><MetricCard label="Online now" value={metrics.ownerOverview.currentOnlineUsers} detail="Active browser sessions" /></section>
     <section className="mt-8 rounded-2xl border border-slate-800 bg-slate-900/70 p-5 shadow-sm"><div className="flex items-center gap-2"><Users className="h-5 w-5 text-indigo-300" /><div><h2 className="text-base font-semibold text-slate-100">User growth</h2><p className="text-sm text-slate-400">New user profiles over the last seven days.</p></div></div>{hasGrowthData ? <div className="mt-5 h-52"><ResponsiveContainer><LineChart data={metrics.userGrowth}><XAxis dataKey="label" stroke="#64748b" tickLine={false} axisLine={false} /><YAxis stroke="#64748b" allowDecimals={false} tickLine={false} axisLine={false} /><Tooltip contentStyle={chartTooltipStyle} /><Line type="monotone" dataKey="value" stroke="#818cf8" strokeWidth={2} dot={{ r: 3 }} /></LineChart></ResponsiveContainer></div> : <div className="mt-5 flex h-28 items-center justify-center rounded-xl border border-dashed border-slate-800 text-sm text-slate-500">User growth will appear after the first indexed user joins.</div>}</section>
+    <FeatureUsage usage={metrics.featureUsage} />
     <section className="mt-8"><RecentActivityTable activities={activities} users={summaries} /></section>
-    <section className="mt-8"><UserDirectory users={visibleUsers} query={search} range={range} onQueryChange={setSearch} onRangeChange={setRange} onSelect={setSelectedUser} /></section>
+    <section className="mt-8"><UserDirectory users={visibleUsers} query={search} range={range} provider={provider} presence={presence} activity={activity} onQueryChange={setSearch} onRangeChange={setRange} onProviderChange={setProvider} onPresenceChange={setPresence} onActivityChange={setActivity} onSelect={setSelectedUser} /></section>
     <FeedbackSection feedback={feedback} users={summaries} onStatusChange={(id, status) => void updateFeedbackStatus(id, status)} />
     {!loading && !records.length && !users.length && <p className="mt-8 rounded-xl border border-slate-800 bg-slate-900/50 p-4 text-center text-sm text-slate-400">No analytics users or events have been recorded yet.</p>}
-  </div><UserProfileDrawer user={selectedUser} activities={activities} onClose={() => setSelectedUser(null)} /></main>;
+  </div><UserProfileDrawer user={selectedUser} activities={activities} feedback={feedback} onClose={() => setSelectedUser(null)} /></main>;
 }
 
-function filterUsers(users: AdminUserSummary[], search: string, range: UserRange): AdminUserSummary[] {
+function FeatureUsage({ usage }: { usage: Array<{ label: string; value: number }> }) {
+  return <section className="mt-8 rounded-2xl border border-slate-800 bg-slate-900/70 p-5 shadow-sm"><div><h2 className="text-base font-semibold text-slate-100">Feature usage</h2><p className="mt-1 text-sm text-slate-400">Activity recorded in the current analytics window.</p></div><div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">{usage.map((item) => <div key={item.label} className="rounded-xl border border-slate-800 bg-slate-950/35 p-3"><p className="text-xl font-semibold tabular-nums text-slate-100">{item.value}</p><p className="mt-1 text-xs text-slate-400">{item.label}</p></div>)}</div></section>;
+}
+
+function filterUsers(users: AdminUserSummary[], search: string, range: UserRange, provider: string, presence: UserPresenceFilter, activity: UserActivityFilter): AdminUserSummary[] {
   const normalized = search.trim().toLowerCase();
   const now = Date.now();
   const start = range === 'today' ? now - 86_400_000 : range === 'week' ? now - 7 * 86_400_000 : range === 'month' ? now - 30 * 86_400_000 : 0;
-  return users.filter((user) => (!normalized || `${user.displayName ?? ''} ${user.email ?? ''}`.toLowerCase().includes(normalized)) && (range === 'all' || Boolean(user.joinedAt && user.joinedAt.getTime() >= start)));
+  return users.filter((user) => (!normalized || `${user.displayName ?? ''} ${user.email ?? ''}`.toLowerCase().includes(normalized)) && (range === 'all' || Boolean(user.joinedAt && user.joinedAt.getTime() >= start)) && (provider === 'all' || user.providerId === provider) && (presence === 'all' || user.status === presence) && (activity === 'all' || Boolean(user.lastActiveAt && user.lastActiveAt.getTime() >= now - 7 * 86_400_000)));
 }
