@@ -35,6 +35,7 @@ interface SidebarProps {
   onMarkNotificationRead: (id: string) => void;
   onMarkAllNotificationsRead: () => void;
   userName?: string;
+  profilePhotoUrl?: string | null;
   userSchool?: string;
   userGrad?: string;
   level?: number;
@@ -53,6 +54,7 @@ export default function Sidebar({
   onMarkNotificationRead,
   onMarkAllNotificationsRead,
   userName = 'Student',
+  profilePhotoUrl,
   userSchool = 'Not Set',
   userGrad = 'Not Set',
   level = 1,
@@ -349,7 +351,7 @@ export default function Sidebar({
           >
             <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-slate-700">
               <img
-                src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=256&auto=format&fit=crop"
+                src={profilePhotoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=256&auto=format&fit=crop'}
                 alt="User profile"
                 className="h-full w-full object-cover"
                 referrerPolicy="no-referrer"

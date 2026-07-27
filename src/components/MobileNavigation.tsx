@@ -37,6 +37,7 @@ interface MobileNavigationProps {
   onMarkNotificationRead: (id: string) => void;
   onMarkAllNotificationsRead: () => void;
   userName?: string;
+  profilePhotoUrl?: string | null;
   userSchool?: string;
   userGrad?: string;
   level?: number;
@@ -55,6 +56,7 @@ export default function MobileNavigation({
   onMarkNotificationRead,
   onMarkAllNotificationsRead,
   userName = 'Student',
+  profilePhotoUrl,
   userSchool = 'Not Set',
   userGrad = 'Not Set',
   level = 1,
@@ -309,7 +311,7 @@ export default function MobileNavigation({
                   <div className="flex items-center gap-3">
                     <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-slate-700">
                       <img
-                        src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=256&auto=format&fit=crop"
+                        src={profilePhotoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=256&auto=format&fit=crop'}
                         alt="User profile"
                         className="h-full w-full object-cover"
                         referrerPolicy="no-referrer"

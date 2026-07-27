@@ -201,7 +201,6 @@ export default function App() {
             xpProgress={xpProgress}
             streak={streak}
             userName={userName}
-            userSchool={userSchool}
             dailyMission={canonicalData?.missions.find((mission) => mission.date === new Date().toISOString().slice(0, 10))}
             onSaveMission={handleSaveMission}
             onDeleteMission={handleDeleteMission}
@@ -326,6 +325,7 @@ export default function App() {
         onMarkNotificationRead={handleMarkNotificationRead}
         onMarkAllNotificationsRead={handleMarkAllNotificationsRead}
         userName={userName}
+        profilePhotoUrl={sessionUser?.photoURL}
         userSchool={userSchool}
         userGrad={userGrad}
         level={level}
@@ -345,6 +345,7 @@ export default function App() {
         onMarkNotificationRead={handleMarkNotificationRead}
         onMarkAllNotificationsRead={handleMarkAllNotificationsRead}
         userName={userName}
+        profilePhotoUrl={sessionUser?.photoURL}
         userSchool={userSchool}
         userGrad={userGrad}
         level={level}
