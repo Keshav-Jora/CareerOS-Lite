@@ -39,6 +39,12 @@ export default function App() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [dashboardPreferences, setDashboardPreferences] = useState<DashboardWidgetPreferences>(() => getDashboardWidgetPreferences());
+  const navigateToView = useCallback((view: string) => {
+    setCurrentView((current) => {
+      if (current !== view) window.history.pushState({ careerOSView: view }, '', window.location.href);
+      return view;
+    });
+  }, []);
   const cloudSync = useMemo(() => new CloudSyncService(), []);
   const isClearingAccount = useRef(false);
 
@@ -86,6 +92,15 @@ export default function App() {
       window.removeEventListener('error', trackAppError);
       window.removeEventListener('unhandledrejection', trackAppError);
     };
+  }, []);
+
+  useEffect(() => {
+    if (!(window.history.state as { careerOSView?: string } | null)?.careerOSView) {
+      window.history.replaceState({ careerOSView: 'dashboard' }, '', window.location.href);
+    }
+    const handlePopState = (event: PopStateEvent) => setCurrentView((event.state as { careerOSView?: string } | null)?.careerOSView ?? 'dashboard');
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   useEffect(() => {
@@ -153,7 +168,7 @@ export default function App() {
       dataService.resetData();
       setCareerDataUpdatedAt(new Date(0).toISOString());
       loadDatabase();
-      setCurrentView('dashboard');
+      navigateToView('dashboard');
       setSyncStatus('offline');
     } catch (error) {
       setAuthError(getAuthErrorMessage(error));
@@ -194,8 +209,8 @@ export default function App() {
             activities={activities}
             certificates={certificates}
             notes={notes}
-            onAddOpportunityTrigger={() => setCurrentView('opportunities')}
-            onNavigateToView={(view) => setCurrentView(view)}
+            onAddOpportunityTrigger={() => navigateToView('opportunities')}
+            onNavigateToView={navigateToView}
             level={level}
             xp={totalXP}
             xpForCurrentLevel={xpForCurrentLevel}
@@ -218,7 +233,7 @@ export default function App() {
             timeline={timelineEntries}
             certificates={certificates}
             userName={userName}
-            onNavigateToView={(view) => setCurrentView(view)}
+            onNavigateToView={navigateToView}
           />
         );
       case 'opportunities':
@@ -238,7 +253,7 @@ export default function App() {
             timelineEntries={timelineEntries}
             certificates={certificates}
             progressData={progressData}
-            onNavigateToView={(view) => setCurrentView(view)}
+            onNavigateToView={navigateToView}
           />
         );
       case 'journey':
@@ -322,7 +337,7 @@ export default function App() {
       {/* Sidebar Navigation (Desktop) */}
       <Sidebar
         currentView={currentView}
-        onViewChange={(view) => setCurrentView(view)}
+        onViewChange={navigateToView}
         theme={theme}
         onToggleTheme={toggleTheme}
         notifications={notifications}
@@ -342,7 +357,7 @@ export default function App() {
       {/* Mobile Top Header & Mobile Bottom Navigation */}
       <MobileNavigation
         currentView={currentView}
-        onViewChange={(view) => setCurrentView(view)}
+        onViewChange={navigateToView}
         theme={theme}
         onToggleTheme={toggleTheme}
         notifications={notifications}
@@ -362,7 +377,7 @@ export default function App() {
       <GlobalSearch
         open={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
-        onNavigate={setCurrentView}
+        onNavigate={navigateToView}
         opportunities={opportunities}
         notes={notes}
         certificates={certificates}

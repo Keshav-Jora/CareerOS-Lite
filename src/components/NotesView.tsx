@@ -19,6 +19,7 @@ import {
   Heading,
   ListTodo,
   Code,
+  Copy,
   BookOpen,
 } from 'lucide-react';
 import { Note } from '../types';
@@ -30,6 +31,12 @@ interface NotesViewProps {
   onSaveNote: (note: Note) => void;
   onDeleteNote: (id: string) => void;
 }
+
+const CODE_TAG = 'Code';
+const LANGUAGE_PREFIX = 'Language:';
+const codeLanguages = ['plaintext', 'typescript', 'javascript', 'python', 'java', 'csharp', 'sql', 'html', 'css', 'json'] as const;
+const isCodeNote = (note: Note) => note.tags.includes(CODE_TAG);
+const languageFor = (note: Note) => note.tags.find((tag) => tag.startsWith(LANGUAGE_PREFIX))?.slice(LANGUAGE_PREFIX.length) || 'plaintext';
 
 export default function NotesView({ theme, notes, onSaveNote, onDeleteNote }: NotesViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -43,6 +50,8 @@ export default function NotesView({ theme, notes, onSaveNote, onDeleteNote }: No
   const [editorTitle, setEditorTitle] = useState('');
   const [editorContent, setEditorContent] = useState('');
   const [editorTagsRaw, setEditorTagsRaw] = useState('');
+  const [editorNoteType, setEditorNoteType] = useState<'text' | 'code'>('text');
+  const [editorLanguage, setEditorLanguage] = useState<(typeof codeLanguages)[number]>('typescript');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
   const activeNote = notes.find((n) => n.id === selectedNoteId);
@@ -56,6 +65,8 @@ export default function NotesView({ theme, notes, onSaveNote, onDeleteNote }: No
   const handleInsertTemplate = (type: 'dsa' | 'cover' | 'pitch') => {
     let tpl = '';
     if (type === 'dsa') {
+      setEditorNoteType('code');
+      setEditorLanguage('typescript');
       tpl = `### [LeetCode] Problem Title\n\n- [ ] Solved Independently?\n- **Difficulty**: Medium\n- **Category**: Array / Dynamic Programming\n\n#### Complexity Analysis\n- **Time Complexity**: O(N log N)\n- **Space Complexity**: O(N)\n\n#### Core Intuition\nUsing a fast hash map lookup in a single chronological pass...\n\n\`\`\`typescript\nfunction solve(nums: number[]): number {\n  // Code goes here\n}\n\`\`\``;
     } else if (type === 'cover') {
       tpl = `### Cover Letter Segment\n\nDear [Hiring Manager Name] at [Company Name],\n\nI am incredibly excited to apply for the [Position Name] role. As a student with a graduation date of [Grad Date], I have focused my development efforts on creating production-ready web architectures...\n\nSincerely,\n[Your Name]`;
@@ -70,7 +81,9 @@ export default function NotesView({ theme, notes, onSaveNote, onDeleteNote }: No
     if (!activeNote) return;
     setEditorTitle(activeNote.title);
     setEditorContent(activeNote.content);
-    setEditorTagsRaw(activeNote.tags.join(', '));
+    setEditorTagsRaw(activeNote.tags.filter((tag) => tag !== CODE_TAG && !tag.startsWith(LANGUAGE_PREFIX)).join(', '));
+    setEditorNoteType(isCodeNote(activeNote) ? 'code' : 'text');
+    setEditorLanguage(languageFor(activeNote) as (typeof codeLanguages)[number]);
     setIsEditing(true);
   };
 
@@ -88,6 +101,8 @@ export default function NotesView({ theme, notes, onSaveNote, onDeleteNote }: No
     setEditorTitle(newNote.title);
     setEditorContent(newNote.content);
     setEditorTagsRaw('General');
+    setEditorNoteType('text');
+    setEditorLanguage('typescript');
     setIsEditing(true);
     setMobileViewMode('detail');
   };
@@ -98,7 +113,9 @@ export default function NotesView({ theme, notes, onSaveNote, onDeleteNote }: No
     const tags = editorTagsRaw
       .split(',')
       .map((t) => t.trim())
-      .filter(Boolean);
+      .filter(Boolean)
+      .filter((tag) => tag !== CODE_TAG && !tag.startsWith(LANGUAGE_PREFIX));
+    if (editorNoteType === 'code') tags.push(CODE_TAG, `${LANGUAGE_PREFIX}${editorLanguage}`);
 
     const updatedNote: Note = {
       ...activeNote,
@@ -231,6 +248,10 @@ export default function NotesView({ theme, notes, onSaveNote, onDeleteNote }: No
       );
     });
   };
+  const copyCode = (note: Note) => { void navigator.clipboard?.writeText(note.content); };
+  const renderNoteContent = (note: Note) => isCodeNote(note)
+    ? <pre className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/70 p-4 font-mono text-xs leading-6 text-slate-200"><code>{note.content}</code></pre>
+    : renderMarkdown(note);
 
   return (
     <>
@@ -489,6 +510,8 @@ export default function NotesView({ theme, notes, onSaveNote, onDeleteNote }: No
                       />
                     </div>
 
+                    <div className="flex flex-wrap items-center gap-2 text-xs"><label className="flex items-center gap-2 text-slate-400"><Code className="h-3.5 w-3.5 text-indigo-400" />Note type<select value={editorNoteType} onChange={(event) => setEditorNoteType(event.target.value as 'text' | 'code')} className="rounded-lg border border-slate-800 bg-slate-950 px-2 py-1 text-slate-200"><option value="text">Text</option><option value="code">Code</option></select></label>{editorNoteType === 'code' && <label className="flex items-center gap-2 text-slate-400">Language<select value={editorLanguage} onChange={(event) => setEditorLanguage(event.target.value as (typeof codeLanguages)[number])} className="rounded-lg border border-slate-800 bg-slate-950 px-2 py-1 text-slate-200">{codeLanguages.map((language) => <option key={language} value={language}>{language}</option>)}</select></label>}</div>
+
                     {/* Quick Insert Templates Bar */}
                     <div className="flex flex-wrap items-center gap-2 p-2 rounded-xl bg-slate-950/60 border border-slate-900">
                       <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider pl-1 mr-1 flex items-center gap-1">
@@ -546,7 +569,8 @@ export default function NotesView({ theme, notes, onSaveNote, onDeleteNote }: No
 
                     {/* Custom rendered preview canvas */}
                     <div className="pt-4 space-y-2 markdown-body select-text">
-                      {renderMarkdown(activeNote)}
+                      {isCodeNote(activeNote) && <div className="mb-3 flex items-center justify-between"><span className="rounded-md bg-slate-800 px-2 py-1 font-mono text-[10px] text-slate-400">{languageFor(activeNote)}</span><button type="button" onClick={() => copyCode(activeNote)} className="inline-flex items-center gap-1 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-semibold text-slate-300 hover:text-white"><Copy className="h-3.5 w-3.5" />Copy code</button></div>}
+                      {renderNoteContent(activeNote)}
                     </div>
                   </div>
                 )}
@@ -827,6 +851,8 @@ export default function NotesView({ theme, notes, onSaveNote, onDeleteNote }: No
                     />
                   </div>
 
+                  <div className="flex flex-wrap items-center gap-2 text-xs"><label className="flex items-center gap-2 text-slate-400"><Code className="h-3.5 w-3.5 text-indigo-400" />Note type<select value={editorNoteType} onChange={(event) => setEditorNoteType(event.target.value as 'text' | 'code')} className="rounded-lg border border-slate-800 bg-slate-950 px-2 py-1.5 text-slate-200"><option value="text">Text</option><option value="code">Code</option></select></label>{editorNoteType === 'code' && <label className="flex items-center gap-2 text-slate-400">Language<select value={editorLanguage} onChange={(event) => setEditorLanguage(event.target.value as (typeof codeLanguages)[number])} className="rounded-lg border border-slate-800 bg-slate-950 px-2 py-1.5 text-slate-200">{codeLanguages.map((language) => <option key={language} value={language}>{language}</option>)}</select></label>}</div>
+
                   {/* Knowledge Hub Templates Bar */}
                   <div className="space-y-1.5 pt-1">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
@@ -936,7 +962,8 @@ export default function NotesView({ theme, notes, onSaveNote, onDeleteNote }: No
 
                   {/* Custom Rendered Markdown Body */}
                   <div className="space-y-2 text-sm text-slate-200 leading-relaxed select-text">
-                    {renderMarkdown(activeNote)}
+                    {isCodeNote(activeNote) && <div className="mb-3 flex items-center justify-between"><span className="rounded-md bg-slate-800 px-2 py-1 font-mono text-[10px] text-slate-400">{languageFor(activeNote)}</span><button type="button" onClick={() => copyCode(activeNote)} className="inline-flex items-center gap-1 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-semibold text-slate-300"><Copy className="h-3.5 w-3.5" />Copy code</button></div>}
+                    {renderNoteContent(activeNote)}
                   </div>
                 </div>
               )}

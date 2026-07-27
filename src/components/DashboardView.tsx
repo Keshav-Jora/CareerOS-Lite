@@ -184,7 +184,7 @@ export default function DashboardView({
         }
       </div>}
 
-      <div className="grid gap-6 xl:grid-cols-2"><CareerMilestones theme={theme} snapshot={careerSnapshot} opportunities={opportunities} certificates={certificates} timelineEntries={timelineEntries} /><WeeklySummary theme={theme} opportunities={opportunities} certificates={certificates} timelineEntries={timelineEntries} snapshot={careerSnapshot} nextFocus={recommendation.highestPriority.title} /></div>
+      <div className="grid gap-6 xl:grid-cols-3"><TodayFocus theme={theme} opportunities={opportunities} timelineEntries={timelineEntries} certificates={certificates} snapshot={careerSnapshot} onNavigate={onNavigateToView} /><CareerMilestones theme={theme} snapshot={careerSnapshot} opportunities={opportunities} certificates={certificates} timelineEntries={timelineEntries} /><WeeklySummary theme={theme} opportunities={opportunities} certificates={certificates} timelineEntries={timelineEntries} snapshot={careerSnapshot} nextFocus={recommendation.highestPriority.title} /></div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(300px,0.75fr)]">
           <section className={`rounded-3xl border p-5 sm:p-6 ${surface}`} aria-labelledby="top-opportunity-title">
@@ -268,6 +268,25 @@ function CareerSnapshot({ theme, statistics, progressEntries, onNavigate }: { th
     { label: 'Progress entries', value: progressEntries, icon: TrendingUp, destination: 'progress' },
   ];
   return <section className={`rounded-3xl border p-6 ${isDark ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-white/90 shadow-sm'}`} aria-labelledby="career-snapshot-title"><div className="flex items-center justify-between gap-4"><div><div className="flex items-center gap-2 text-sm font-semibold text-sky-400"><ShieldCheck className="h-4 w-4" aria-hidden="true" /> Career snapshot</div><h2 id="career-snapshot-title" className={`mt-2 font-display text-xl font-bold ${isDark ? 'text-white' : 'text-slate-950'}`}>Your tracked career data</h2></div><span className="text-xs text-slate-400">Live repository view</span></div><div className="mt-5 grid auto-rows-fr grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-3">{items.map((item) => { const Icon = item.icon; return <button type="button" key={item.label} onClick={() => onNavigate(item.destination)} className={`flex h-full min-h-32 flex-col rounded-2xl border p-4 text-left transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${isDark ? 'border-slate-800 bg-slate-950/35 hover:border-slate-700' : 'border-slate-200 bg-slate-50 hover:border-slate-300'}`}><Icon className="h-4 w-4 shrink-0 text-indigo-400" aria-hidden="true" /><p className={`mt-4 text-2xl font-bold leading-none tabular-nums ${isDark ? 'text-white' : 'text-slate-950'}`}>{item.value}</p><p className="mt-auto min-h-8 pt-3 text-[10px] font-medium leading-4 text-balance text-slate-400 [overflow-wrap:normal]">{item.label}</p></button>; })}</div></section>;
+}
+function TodayFocus({ theme, opportunities, timelineEntries, certificates, snapshot, onNavigate }: { theme: 'light' | 'dark'; opportunities: Opportunity[]; timelineEntries: TimelineEntry[]; certificates: Certificate[]; snapshot: CanonicalCareerData | null; onNavigate: (view: string) => void }) {
+  const isDark = theme === 'dark';
+  const today = new Date().toISOString().slice(0, 10);
+  const deadline = opportunities.filter((opportunity) => opportunity.deadline >= today && !['Completed', 'Selected', 'Rejected'].includes(opportunity.status)).sort((left, right) => left.deadline.localeCompare(right.deadline))[0];
+  const activeGoal = snapshot?.goals.some((goal) => goal.status === 'active');
+  const hasTodayJourney = timelineEntries.some((entry) => entry.date === today);
+  const focus = deadline && deadline.deadline <= new Date(Date.now() + 7 * 86_400_000).toISOString().slice(0, 10)
+    ? { title: 'Upcoming deadline', description: `${deadline.title} closes on ${new Date(`${deadline.deadline}T00:00:00`).toLocaleDateString()}.`, action: 'Review opportunity', destination: 'opportunities' }
+    : opportunities.length === 0
+      ? { title: 'Add your first opportunity', description: 'Start a pipeline so CareerOS can help you track deadlines and progress.', action: 'Add opportunity', destination: 'opportunities' }
+      : activeGoal
+        ? { title: 'Complete a goal', description: 'Choose one active goal and log the next meaningful step.', action: 'Open Journey', destination: 'journey' }
+        : !hasTodayJourney
+          ? { title: "Log today's journey", description: 'Capture what you learned or built while it is still fresh.', action: 'Log journey', destination: 'journey' }
+          : certificates.length === 0
+            ? { title: 'Add a certificate', description: 'Keep your verified learning achievements visible in one place.', action: 'Add certificate', destination: 'certificates' }
+            : { title: 'Keep your momentum', description: 'Your workspace is current. Review your next opportunity and continue your progress.', action: 'View opportunities', destination: 'opportunities' };
+  return <section className={`rounded-3xl border p-5 sm:p-6 ${isDark ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-white/90 shadow-sm'}`} aria-labelledby="todays-focus-title"><div className="flex items-center gap-2 text-sm font-semibold text-fuchsia-400"><Sparkles className="h-4 w-4" aria-hidden="true" /> Today’s focus</div><h2 id="todays-focus-title" className={`mt-2 font-display text-xl font-bold ${isDark ? 'text-white' : 'text-slate-950'}`}>{focus.title}</h2><p className={`mt-2 text-sm leading-6 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{focus.description}</p><button type="button" onClick={() => onNavigate(focus.destination)} className="mt-5 inline-flex min-h-10 items-center gap-2 rounded-xl bg-indigo-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400">{focus.action}<ArrowRight className="h-4 w-4" aria-hidden="true" /></button></section>;
 }
 function CareerMilestones({ theme, snapshot, opportunities, certificates, timelineEntries }: { theme: 'light' | 'dark'; snapshot: CanonicalCareerData | null; opportunities: Opportunity[]; certificates: Certificate[]; timelineEntries: TimelineEntry[] }) {
   const isDark = theme === 'dark';
