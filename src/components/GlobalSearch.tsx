@@ -13,7 +13,7 @@ interface GlobalSearchProps {
 }
 
 const destinations = [
-  ['Dashboard', 'dashboard'], ['Nova AI', 'nova'], ['Opportunities', 'opportunities'], ['Journey', 'journey'], ['Progress', 'progress'], ['Certificates', 'certificates'], ['Notes', 'notes'], ['Settings', 'settings'], ['Feedback', 'feedback'], ['Changelog', 'changelog'],
+  ['Dashboard', 'dashboard'], ['Nova AI', 'nova'], ['Opportunities', 'opportunities'], ['Journey', 'journey'], ['Progress', 'progress'], ['Certificates', 'certificates'], ['Notes', 'notes'], ['Settings', 'settings'], ['Feedback', 'feedback'],
 ] as const;
 
 export default function GlobalSearch({ open, onClose, onNavigate, opportunities, notes, certificates }: GlobalSearchProps) {

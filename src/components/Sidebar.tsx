@@ -22,7 +22,6 @@ import {
   Info,
   Zap,
   MessageSquarePlus,
-  History,
 } from 'lucide-react';
 import { AppNotification } from '../types';
 
@@ -99,7 +98,6 @@ export default function Sidebar({
     { id: 'certificates', label: 'Certificates', icon: Award },
     { id: 'notes', label: 'Notes', icon: FileText },
     { id: 'feedback', label: 'Feedback', icon: MessageSquarePlus },
-    { id: 'changelog', label: 'Changelog', icon: History },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 

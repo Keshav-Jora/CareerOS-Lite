@@ -27,7 +27,6 @@ import CertificatesView from './components/CertificatesView';
 import NotesView from './components/NotesView';
 import SettingsView from './components/SettingsView';
 import FeedbackView from './components/FeedbackView';
-import ChangelogView from './components/ChangelogView';
 import GlobalSearch from './components/GlobalSearch';
 
 export default function App() {
@@ -311,8 +310,6 @@ export default function App() {
         );
       case 'feedback':
         return <FeedbackView theme={theme} user={sessionUser} />;
-      case 'changelog':
-        return <ChangelogView />;
       default:
         return <div className="text-white text-center py-20">View not found.</div>;
     }
