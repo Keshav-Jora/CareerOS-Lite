@@ -167,10 +167,10 @@ export default function JourneyView({
         {timelineEntries.length === 0 ? (
           <EmptyState
             icon={Milestone}
-            title="Your career journey starts here"
-            description="Log a milestone, project, learning moment, or certification to build a clear record of how your career is evolving."
+            title="Give today’s progress a place to live"
+            description="Log what you learned, built, or achieved today to start a clear record of your career journey."
             theme={theme}
-            actionLabel="Log first milestone"
+            actionLabel="Log today’s progress"
             onAction={() => setIsOpenForm(true)}
           />
         ) : (
@@ -435,10 +435,10 @@ export default function JourneyView({
         {timelineEntries.length === 0 ? (
           <EmptyState
             icon={Milestone}
-            title="Your career journey starts here"
-            description="Log a milestone, project, learning moment, or certification to build a clear record of how your career is evolving."
+            title="Give today’s progress a place to live"
+            description="Log what you learned, built, or achieved today to start a clear record of your career journey."
             theme={theme}
-            actionLabel="Log first milestone"
+            actionLabel="Log today’s progress"
             onAction={() => setIsOpenForm(true)}
           />
         ) : (
@@ -893,10 +893,10 @@ export default function JourneyView({
       {timelineEntries.length === 0 ? (
         <EmptyState
           icon={Milestone}
-          title="Your career journey starts here"
-          description="Log a milestone, project, learning moment, or certification to build a clear record of how your career is evolving."
+          title="Give today’s progress a place to live"
+          description="Log what you learned, built, or achieved today to start a clear record of your career journey."
           theme={theme}
-          actionLabel="Log first milestone"
+          actionLabel="Log today’s progress"
           onAction={() => setIsOpenForm(true)}
         />
       ) : (

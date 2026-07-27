@@ -351,10 +351,10 @@ export default function NotesView({ theme, notes, onSaveNote, onDeleteNote }: No
                 <div className="px-2 py-3">
                   <EmptyState
                     icon={FileText}
-                    title="No notes yet"
+                    title="Keep the important details close"
                     description="Capture ideas, interview prep, and career research so they are ready when you need them."
                     theme={theme}
-                    actionLabel="Create note"
+                    actionLabel="Capture important notes"
                     onAction={handleCreateNote}
                   />
                 </div>
@@ -692,10 +692,10 @@ export default function NotesView({ theme, notes, onSaveNote, onDeleteNote }: No
               {otherNotes.length === 0 && pinnedNotes.length === 0 ? (
                 <EmptyState
                   icon={FileText}
-                  title="No notes yet"
+                  title="Keep the important details close"
                   description="Capture ideas, interview prep, and career research so they are ready when you need them."
                   theme={theme}
-                  actionLabel="Create note"
+                  actionLabel="Capture important notes"
                   onAction={handleCreateNote}
                 />
               ) : (

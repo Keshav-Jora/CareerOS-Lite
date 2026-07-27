@@ -92,6 +92,11 @@ export default function DashboardView({
   const headingText = isDark ? 'text-white' : 'text-slate-950';
   const profileChecks = [Boolean(userName && userName !== 'Student'), Boolean(userSchool && userSchool !== 'Not Set'), opportunities.length > 0];
   const profileCompletion = Math.round((profileChecks.filter(Boolean).length / profileChecks.length) * 100);
+  const profileChecklist = [
+    { label: 'Profile details', complete: profileChecks[0] },
+    { label: 'Education', complete: profileChecks[1] },
+    { label: 'First opportunity', complete: profileChecks[2] },
+  ];
   const trendLabel = intelligence.weeklyTrend === 0
     ? 'Stable this week'
     : `${intelligence.weeklyTrend > 0 ? '↑' : '↓'} ${Math.abs(intelligence.weeklyTrend)}h this week`;
@@ -119,7 +124,7 @@ export default function DashboardView({
 
       {profileCompletion < 100 && (
         <section className={`flex flex-col gap-4 rounded-2xl border p-4 sm:flex-row sm:items-center sm:justify-between ${surface}`} aria-labelledby="profile-completion-title">
-          <div className="min-w-0"><div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-indigo-400" aria-hidden="true" /><h2 id="profile-completion-title" className={`text-sm font-semibold ${headingText}`}>Profile completion</h2><span className={`text-xs ${mutedText}`}>{profileCompletion}%</span></div><p className={`mt-1 text-sm ${mutedText}`}>Complete your profile to make guidance more relevant.</p><div className={`mt-3 h-1.5 overflow-hidden rounded-full ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`}><div className="h-full rounded-full bg-indigo-400" style={{ width: `${profileCompletion}%` }} /></div></div>
+          <div className="min-w-0"><div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-indigo-400" aria-hidden="true" /><h2 id="profile-completion-title" className={`text-sm font-semibold ${headingText}`}>Profile completion</h2><span className={`text-xs ${mutedText}`}>{profileCompletion}%</span></div><p className={`mt-1 text-sm ${mutedText}`}>Complete your profile to make guidance more relevant.</p><div className={`mt-3 h-1.5 overflow-hidden rounded-full ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`}><div className="h-full rounded-full bg-indigo-400" style={{ width: `${profileCompletion}%` }} /></div><div className={`mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs ${mutedText}`}><span className={`font-medium ${headingText}`}>Remaining</span>{profileChecklist.map((item) => <span key={item.label} className="inline-flex items-center gap-1.5">{item.complete ? <Check className="h-3.5 w-3.5 text-emerald-400" aria-hidden="true" /> : <span className="h-3 w-3 rounded-sm border border-slate-500" aria-hidden="true" />}{item.label}</span>)}</div></div>
           <button type="button" onClick={() => onNavigateToView(userSchool ? 'opportunities' : 'settings')} className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-xl bg-indigo-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400">Complete profile</button>
         </section>
       )}

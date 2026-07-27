@@ -29,9 +29,6 @@ import SettingsView from './components/SettingsView';
 import FeedbackView from './components/FeedbackView';
 import ChangelogView from './components/ChangelogView';
 import GlobalSearch from './components/GlobalSearch';
-import OnboardingFlow from './components/OnboardingFlow';
-import WhatsNewModal from './components/WhatsNewModal';
-import { completeOnboarding, dismissWhatsNew, isOnboardingComplete, shouldShowWhatsNew } from './utils/productExperience';
 
 export default function App() {
   // Navigation View State
@@ -41,8 +38,6 @@ export default function App() {
   const [authBusy, setAuthBusy] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [isOnboardingOpen, setIsOnboardingOpen] = useState(() => !isOnboardingComplete());
-  const [isWhatsNewOpen, setIsWhatsNewOpen] = useState(() => isOnboardingComplete() && shouldShowWhatsNew());
   const cloudSync = useMemo(() => new CloudSyncService(), []);
   const isClearingAccount = useRef(false);
 
@@ -366,15 +361,6 @@ export default function App() {
         opportunities={opportunities}
         notes={notes}
         certificates={certificates}
-      />
-      <OnboardingFlow
-        open={isOnboardingOpen}
-        onNavigate={setCurrentView}
-        onComplete={() => { completeOnboarding(); setIsOnboardingOpen(false); setIsWhatsNewOpen(shouldShowWhatsNew()); }}
-      />
-      <WhatsNewModal
-        open={isWhatsNewOpen}
-        onClose={() => { dismissWhatsNew(); setIsWhatsNewOpen(false); }}
       />
 
       {/* Main Workspace Frame */}

@@ -296,10 +296,10 @@ export default function CertificatesView({
       {certificates.length === 0 ? (
         <EmptyState
           icon={Award}
-          title="No certificates yet"
-          description="Add a course, credential, or competition certificate to showcase the achievements that strengthen your career profile."
+          title="Showcase your first credential"
+          description="Add a course, credential, or competition certificate to keep your achievements visible and organized."
           theme={theme}
-          actionLabel="Add certificate"
+          actionLabel="Add your first certificate"
           onAction={() => setIsFormOpen(true)}
         />
       ) : (

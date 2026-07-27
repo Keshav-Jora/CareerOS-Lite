@@ -786,10 +786,10 @@ export default function OpportunitiesView({
       {filteredOpps.length === 0 ? (
         <EmptyState
           icon={Filter}
-          title="No opportunities to show"
-          description="Add an internship, job, or program to track its deadline and give Nova more context for recommendations."
+          title={opportunities.length === 0 ? 'Ready to start your opportunity pipeline?' : 'No opportunities match these filters'}
+          description={opportunities.length === 0 ? 'Capture an internship, job, or program to track its deadline and next steps.' : 'Adjust your filters or add another opportunity to keep your pipeline moving.'}
           theme={theme}
-          actionLabel="Add opportunity"
+          actionLabel={opportunities.length === 0 ? 'Capture your first opportunity' : 'Add opportunity'}
           onAction={() => setIsFormOpen(true)}
         />
       ) : (
@@ -1067,10 +1067,10 @@ export default function OpportunitiesView({
           {filteredOpps.length === 0 ? (
             <EmptyState
               icon={Filter}
-              title="No opportunities to show"
-              description="Add an internship, job, or program to track its deadline and give Nova more context for recommendations."
+              title={opportunities.length === 0 ? 'Ready to start your opportunity pipeline?' : 'No opportunities match these filters'}
+              description={opportunities.length === 0 ? 'Capture an internship, job, or program to track its deadline and next steps.' : 'Adjust your filters or add another opportunity to keep your pipeline moving.'}
               theme={theme}
-              actionLabel="Add opportunity"
+              actionLabel={opportunities.length === 0 ? 'Capture your first opportunity' : 'Add opportunity'}
               onAction={() => setIsFormOpen(true)}
             />
           ) : (
